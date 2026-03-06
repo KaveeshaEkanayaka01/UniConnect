@@ -1,0 +1,335 @@
+
+import React, { useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { 
+  Search, 
+  Plus, 
+  Users, 
+  MessageSquare, 
+  Calendar, 
+  Star, 
+  ArrowRight,
+  MoreVertical,
+  Filter,
+  Globe,
+  Lock,
+  Zap
+} from 'lucide-react';
+
+interface  Club  {
+  id: string;
+  name: string;
+  category: string;
+  members: number;
+  image: string;
+  description: string;
+  isPrivate: boolean;
+  role: 'President' | 'Member' | 'Admin' | 'None';
+  tags: string[];
+  unreadMessages?: number;
+  upcomingEvent?: string;
+}
+
+const myClubs = [
+  {
+    id: '1',
+    name: 'AI & Robotics Society',
+    category: 'Technology',
+    members: 1240,
+    image: 'https://picsum.photos/seed/robotics/400/200',
+    description: 'Exploring the future of automation and artificial intelligence through hands-on projects.',
+    isPrivate: false,
+    role: 'President',
+    tags: ['AI', 'Robotics', 'Coding'],
+    unreadMessages: 12,
+    upcomingEvent: 'Hackathon Prep - Tomorrow'
+  },
+  {
+    id: '2',
+    name: 'Design Collective',
+    category: 'Creative',
+    members: 850,
+    image: 'https://picsum.photos/seed/design/400/200',
+    description: 'A community for UI/UX designers, illustrators, and creative thinkers to collaborate.',
+    isPrivate: false,
+    role: 'Member',
+    tags: ['UI/UX', 'Branding', 'Art'],
+    unreadMessages: 5,
+    upcomingEvent: 'Portfolio Review - Friday'
+  },
+  {
+    id: '3',
+    name: 'Entrepreneurship Hub',
+    category: 'Business',
+    members: 2100,
+    image: 'https://picsum.photos/seed/business/400/200',
+    description: 'Empowering students to build startups and connect with industry leaders.',
+    isPrivate: true,
+    role: 'Admin',
+    tags: ['Startups', 'Networking', 'VC'],
+    upcomingEvent: 'Pitch Night - Mar 15'
+  }
+];
+
+const recommendedClubs = [
+  {
+    id: '4',
+    name: 'Data Science Guild',
+    category: 'Technology',
+    members: 920,
+    image: 'https://picsum.photos/seed/data/400/200',
+    description: 'Deep dive into big data, machine learning, and statistical analysis.',
+    isPrivate: false,
+    role: 'None',
+    tags: ['Python', 'Big Data', 'ML']
+  },
+  {
+    id: '5',
+    name: 'Sustainable Future',
+    category: 'Environment',
+    members: 450,
+    image: 'https://picsum.photos/seed/nature/400/200',
+    description: 'Working towards a greener campus and sustainable living practices.',
+    isPrivate: false,
+    role: 'None',
+    tags: ['Eco', 'Sustainability', 'Action']
+  }
+];
+
+const MyClubs  = () => {
+  const [searchQuery, setSearchQuery] = useState('');
+  const [activeTab, setActiveTab] = useState<'my' | 'discover'>('my');
+
+  const filteredMyClubs = myClubs.filter(club => 
+    club.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    club.category.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  return (
+    <motion.div 
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.5 }}
+      className="space-y-8 pb-12"
+    >
+      {/* Header Section */}
+      <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
+        <div>
+          <h1 className="text-4xl font-extrabold tracking-tight text-slate-900">My Clubs</h1>
+          <p className="mt-2 text-slate-500 max-w-lg">
+            Manage your memberships, lead your societies, and discover new communities on campus.
+          </p>
+        </div>
+        
+        <div className="flex items-center gap-3">
+          <button className="flex items-center gap-2 bg-indigo-600 text-white px-6 py-2.5 rounded-xl font-bold text-sm shadow-lg shadow-indigo-200 hover:bg-indigo-700 transition-all active:scale-95">
+            <Plus size={18} />
+            Create Club
+          </button>
+        </div>
+      </div>
+
+      {/* Search and Tabs */}
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 bg-white p-4 rounded-3xl border border-slate-100 shadow-sm">
+        <div className="flex items-center gap-2 p-1 bg-slate-50 rounded-2xl w-fit">
+          <button 
+            onClick={() => setActiveTab('my')}
+            className={`px-6 py-2 rounded-xl text-sm font-bold transition-all ${activeTab === 'my' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+          >
+            My Memberships
+          </button>
+          <button 
+            onClick={() => setActiveTab('discover')}
+            className={`px-6 py-2 rounded-xl text-sm font-bold transition-all ${activeTab === 'discover' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+          >
+            Discover
+          </button>
+        </div>
+
+        <div className="flex items-center gap-3">
+          <div className="relative flex-1 lg:w-80">
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+            <input 
+              type="text" 
+              placeholder="Search clubs, categories..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full pl-12 pr-4 py-3 bg-slate-50 border-transparent rounded-2xl text-sm focus:bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all outline-none"
+            />
+          </div>
+          <button className="p-3 bg-slate-50 text-slate-500 rounded-2xl hover:bg-slate-100 transition-colors">
+            <Filter size={20} />
+          </button>
+        </div>
+      </div>
+
+      {/* Content Grid */}
+      <AnimatePresence mode="wait">
+        {activeTab === 'my' ? (
+          <motion.div 
+            key="my-clubs"
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: 20 }}
+            className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-8"
+          >
+            {filteredMyClubs.map((club) => (
+              <div key={club.id} className="group bg-white rounded-[32px] border border-slate-100 shadow-sm hover:shadow-xl hover:shadow-indigo-500/5 transition-all duration-500 overflow-hidden flex flex-col">
+                {/* Club Image/Header */}
+                <div className="relative h-48 overflow-hidden">
+                  <img 
+                    src={club.image} 
+                    alt={club.name} 
+                    className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+                  
+                  <div className="absolute top-4 left-4 flex gap-2">
+                    <span className="bg-white/90 backdrop-blur-md px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider text-slate-900 shadow-sm">
+                      {club.category}
+                    </span>
+                    {club.isPrivate && (
+                      <div className="bg-slate-900/80 backdrop-blur-md p-1.5 rounded-full text-white">
+                        <Lock size={12} />
+                      </div>
+                    )}
+                  </div>
+
+                  <button className="absolute top-4 right-4 p-2 bg-white/90 backdrop-blur-md rounded-xl text-slate-600 opacity-0 group-hover:opacity-100 transition-all duration-300 hover:text-indigo-600">
+                    <MoreVertical size={18} />
+                  </button>
+                </div>
+
+                {/* Club Content */}
+                <div className="p-6 flex-1 flex flex-col">
+                  <div className="flex items-start justify-between mb-3">
+                    <div>
+                      <h3 className="text-xl font-black text-slate-900 group-hover:text-indigo-600 transition-colors">{club.name}</h3>
+                      <div className="flex items-center gap-2 mt-1">
+                        <div className="flex -space-x-2">
+                          {[1, 2, 3].map(i => (
+                            <img key={i} src={`https://picsum.photos/32/32?random=${club.id}${i}`} className="w-6 h-6 rounded-full border-2 border-white" alt="Member" />
+                          ))}
+                        </div>
+                        <span className="text-xs font-bold text-slate-400">+{club.members.toLocaleString()} members</span>
+                      </div>
+                    </div>
+                    <div className={`px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest ${
+                      club.role === 'President' ? 'bg-amber-50 text-amber-600 border border-amber-100' :
+                      club.role === 'Admin' ? 'bg-indigo-50 text-indigo-600 border border-indigo-100' :
+                      'bg-slate-50 text-slate-500 border border-slate-100'
+                    }`}>
+                      {club.role}
+                    </div>
+                  </div>
+
+                  <p className="text-sm text-slate-500 line-clamp-2 mb-6 leading-relaxed">
+                    {club.description}
+                  </p>
+
+                  {club.upcomingEvent && (
+                    <div className="mb-6 p-3 rounded-2xl bg-indigo-50/50 border border-indigo-100/50 flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-xl bg-indigo-600 flex items-center justify-center text-white shrink-0">
+                        <Calendar size={14} />
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-[10px] font-bold text-indigo-400 uppercase tracking-wider leading-none mb-0.5">Upcoming</p>
+                        <p className="text-xs font-bold text-indigo-900 truncate">{club.upcomingEvent}</p>
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="mt-auto pt-6 border-t border-slate-50 flex items-center justify-between">
+                    <div className="flex items-center gap-4">
+                      <div className="flex items-center gap-1.5 text-slate-400 hover:text-indigo-600 transition-colors cursor-pointer relative">
+                        <MessageSquare size={18} />
+                        {club.unreadMessages && (
+                          <span className="absolute -top-1 -right-1 w-4 h-4 bg-rose-500 text-white text-[9px] font-black rounded-full flex items-center justify-center border-2 border-white">
+                            {club.unreadMessages}
+                          </span>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-1.5 text-slate-400 hover:text-indigo-600 transition-colors cursor-pointer">
+                        <Globe size={18} />
+                      </div>
+                    </div>
+                    <button className="flex items-center gap-2 text-indigo-600 font-black text-sm group/btn">
+                      Enter Club
+                      <ArrowRight size={16} className="group-hover/btn:translate-x-1 transition-transform" />
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </motion.div>
+        ) : (
+          <motion.div 
+            key="discover-clubs"
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: -20 }}
+            className="space-y-12"
+          >
+            {/* Featured Section */}
+            <div className="relative rounded-[40px] bg-slate-900 p-8 lg:p-12 overflow-hidden">
+              <div className="absolute top-0 right-0 w-1/2 h-full bg-gradient-to-l from-indigo-500/20 to-transparent"></div>
+              <div className="relative z-10 grid lg:grid-cols-2 gap-12 items-center">
+                <div>
+                  <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 text-[10px] font-black uppercase tracking-[0.2em] mb-6">
+                    <Zap size={12} className="fill-current" />
+                    Featured Community
+                  </div>
+                  <h2 className="text-4xl lg:text-5xl font-black text-white mb-6 leading-tight">Join the University <br/> <span className="text-indigo-400">Debate Union</span></h2>
+                  <p className="text-slate-400 text-lg mb-8 max-w-md leading-relaxed">Master the art of persuasion, critical thinking, and public speaking with the campus's most prestigious society.</p>
+                  <div className="flex flex-wrap gap-4">
+                    <button className="bg-indigo-600 text-white px-8 py-3.5 rounded-2xl font-black text-sm shadow-xl shadow-indigo-500/20 hover:bg-indigo-700 transition-all active:scale-95">
+                      Apply to Join
+                    </button>
+                    <button className="bg-white/5 text-white border border-white/10 px-8 py-3.5 rounded-2xl font-black text-sm hover:bg-white/10 transition-all">
+                      View Society
+                    </button>
+                  </div>
+                </div>
+                <div className="hidden lg:block relative">
+                  <div className="absolute inset-0 bg-indigo-500/20 blur-[100px] rounded-full"></div>
+                  <img src="https://picsum.photos/seed/debate/600/400" className="relative z-10 rounded-3xl shadow-2xl transform rotate-2 hover:rotate-0 transition-transform duration-700" alt="Featured" />
+                </div>
+              </div>
+            </div>
+
+            {/* Recommended Grid */}
+            <div>
+              <div className="flex items-center justify-between mb-8">
+                <h3 className="text-2xl font-black text-slate-900">Recommended for You</h3>
+                <button className="text-sm font-bold text-indigo-600 hover:text-indigo-700">View All Suggestions</button>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                {recommendedClubs.map(club => (
+                  <div key={club.id} className="bg-white p-6 rounded-[32px] border border-slate-100 shadow-sm hover:shadow-lg transition-all flex gap-6 items-center group">
+                    <img src={club.image} className="w-24 h-24 rounded-2xl object-cover group-hover:scale-105 transition-transform" alt={club.name} />
+                    <div className="flex-1">
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="text-[10px] font-black text-indigo-500 uppercase tracking-widest">{club.category}</span>
+                        <div className="flex items-center gap-1 text-slate-400 text-[10px] font-bold">
+                          <Users size={12} />
+                          {club.members}
+                        </div>
+                      </div>
+                      <h4 className="text-lg font-black text-slate-900 mb-2">{club.name}</h4>
+                      <p className="text-xs text-slate-500 line-clamp-1 mb-4">{club.description}</p>
+                      <button className="text-xs font-black text-indigo-600 flex items-center gap-1 group/btn">
+                        Learn More <ArrowRight size={14} className="group-hover/btn:translate-x-1 transition-transform" />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </motion.div>
+  );
+};
+
+export default MyClubs;
