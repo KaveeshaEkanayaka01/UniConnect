@@ -10,18 +10,17 @@ import {
 } from "lucide-react";
 
 const StatCard = ({ title, value, icon: Icon, color }) => (
-  <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm hover:shadow-md transition">
-    <div className="flex items-start justify-between">
-      <div>
-        <p className="text-sm font-medium text-slate-500">{title}</p>
-        <h3 className="text-2xl font-bold text-slate-900 mt-1">{value}</h3>
-      </div>
-      <div className={`p-3 rounded-xl bg-${color}-50 text-${color}-600`}>
-        <Icon size={22} />
-      </div>
+  <div className={`bg-white rounded-2xl border shadow p-4 flex items-center gap-4`}>
+    <div className={`p-3 rounded-lg bg-${color}-100 text-${color}-600`}>
+      <Icon size={20} />
+    </div>
+    <div>
+      <p className="text-sm text-gray-500">{title}</p>
+      <p className="text-lg font-semibold text-gray-800">{value}</p>
     </div>
   </div>
 );
+  
 
 const DashboardPage = () => {
   const [user, setUser] = useState(null);
@@ -86,13 +85,7 @@ const DashboardPage = () => {
               </Link>
             </div>
           </div>
-          <div className="hidden lg:block">
-            <img
-              src="https://picsum.photos/300/200?random=10"
-              alt="Dashboard"
-              className="w-56 rounded-2xl shadow-2xl rotate-3"
-            />
-          </div>
+           
         </div>
       </div>
 

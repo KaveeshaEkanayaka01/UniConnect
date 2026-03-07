@@ -35,7 +35,7 @@ const LoginPage = () => {
         </div>
 
         <h2 className="text-center text-2xl font-bold text-gray-900">
-          Sign in to UniClub
+          Sign in to UniConnect
         </h2>
         <p className="mt-1 text-center text-sm text-gray-600">
           Or{" "}
