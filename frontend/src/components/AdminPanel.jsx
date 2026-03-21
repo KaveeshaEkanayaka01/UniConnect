@@ -33,6 +33,7 @@ const AdminPanel = () => {
   const [isSaving, setIsSaving] = useState(false);
   const [message, setMessage] = useState("");
   const [me, setMe] = useState(null);
+  const [hasAdminAccess, setHasAdminAccess] = useState(false);
 
   const [form, setForm] = useState({
     fullName: "",
@@ -72,17 +73,41 @@ const AdminPanel = () => {
   };
 
   const loadAdminData = async () => {
+    setMessage("");
     try {
       setIsLoading(true);
-      const [usersRes, badgesRes, meRes] = await Promise.all([
-        API.get("/admin/users"),
-        API.get("/admin/badges"),
-        API.get("/auth/me"),
-      ]);
 
-      setUsers(Array.isArray(usersRes.data) ? usersRes.data : []);
-      setBadges(Array.isArray(badgesRes.data) ? badgesRes.data : []);
-      setMe(meRes.data || null);
+      // Always load logged-in user details first.
+      try {
+        const meRes = await API.get("/auth/me");
+        setMe(meRes.data || null);
+      } catch (meError) {
+        setMe(null);
+      }
+
+      try {
+        const [usersRes, badgesRes] = await Promise.all([
+          API.get("/admin/users"),
+          API.get("/admin/badges"),
+        ]);
+
+        setUsers(Array.isArray(usersRes.data) ? usersRes.data : []);
+        setBadges(Array.isArray(badgesRes.data) ? badgesRes.data : []);
+        setHasAdminAccess(true);
+      } catch (adminError) {
+        setUsers([]);
+        setBadges([]);
+        setHasAdminAccess(false);
+
+        const status = adminError?.response?.status;
+        if (status === 403) {
+          setMessage("Your account does not have admin permission yet. Use SYSTEM_ADMIN or CLUB_ADMIN role.");
+        } else if (status === 404) {
+          setMessage("Admin API not found. Restart backend server to load new /api/admin routes.");
+        } else {
+          setMessage(adminError?.response?.data?.message || "Failed to load admin user data");
+        }
+      }
     } catch (error) {
       setMessage(error?.response?.data?.message || "Failed to load admin data");
     } finally {
@@ -148,6 +173,11 @@ const AdminPanel = () => {
     event.preventDefault();
     setMessage("");
 
+    if (!hasAdminAccess) {
+      setMessage("You do not have permission to manage users.");
+      return;
+    }
+
     try {
       setIsSaving(true);
       if (selectedUserId) {
@@ -171,6 +201,11 @@ const AdminPanel = () => {
   };
 
   const handleDeleteUser = async (userId) => {
+    if (!hasAdminAccess) {
+      setMessage("You do not have permission to manage users.");
+      return;
+    }
+
     const ok = window.confirm("Delete this user and profile permanently?");
     if (!ok) return;
 
@@ -188,6 +223,12 @@ const AdminPanel = () => {
 
   const handleAssignReward = async (event) => {
     event.preventDefault();
+
+    if (!hasAdminAccess) {
+      setMessage("You do not have permission to assign rewards.");
+      return;
+    }
+
     if (!selectedUserId) {
       setMessage("Select a user first");
       return;
@@ -249,6 +290,10 @@ const AdminPanel = () => {
 
         {isLoading ? (
           <p className="text-sm text-slate-500">Loading users...</p>
+        ) : !hasAdminAccess ? (
+          <p className="text-sm text-slate-500">
+            Admin-only data is hidden for your current role. Your own account details are shown above.
+          </p>
         ) : (
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
@@ -321,30 +366,30 @@ const AdminPanel = () => {
               <UserPlus size={16} /> {selectedUserId ? "Update User" : "Add New User"}
             </h3>
 
-            <input value={form.fullName} onChange={(e) => handleInputChange("fullName", e.target.value)} placeholder="Full Name" className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm" required />
-            <input value={form.email} onChange={(e) => handleInputChange("email", e.target.value)} placeholder="Email" className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm" required />
-            <input value={form.password} onChange={(e) => handleInputChange("password", e.target.value)} placeholder={selectedUserId ? "New Password (optional)" : "Password"} className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm" required={!selectedUserId} />
-            <input value={form.studentId} onChange={(e) => handleInputChange("studentId", e.target.value)} placeholder="Student ID" className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm" required />
-            <input value={form.faculty} onChange={(e) => handleInputChange("faculty", e.target.value)} placeholder="Faculty" className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm" required />
-            <input value={form.yearOfStudy} onChange={(e) => handleInputChange("yearOfStudy", e.target.value)} placeholder="Year of Study" className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm" required />
-            <input value={form.degreeProgram} onChange={(e) => handleInputChange("degreeProgram", e.target.value)} placeholder="Degree Program" className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm" />
-            <textarea value={form.bio} onChange={(e) => handleInputChange("bio", e.target.value)} placeholder="Bio" className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm" rows={2} />
+            <input value={form.fullName} onChange={(e) => handleInputChange("fullName", e.target.value)} placeholder="Full Name" className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm" required disabled={!hasAdminAccess} />
+            <input value={form.email} onChange={(e) => handleInputChange("email", e.target.value)} placeholder="Email" className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm" required disabled={!hasAdminAccess} />
+            <input value={form.password} onChange={(e) => handleInputChange("password", e.target.value)} placeholder={selectedUserId ? "New Password (optional)" : "Password"} className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm" required={!selectedUserId} disabled={!hasAdminAccess} />
+            <input value={form.studentId} onChange={(e) => handleInputChange("studentId", e.target.value)} placeholder="Student ID" className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm" required disabled={!hasAdminAccess} />
+            <input value={form.faculty} onChange={(e) => handleInputChange("faculty", e.target.value)} placeholder="Faculty" className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm" required disabled={!hasAdminAccess} />
+            <input value={form.yearOfStudy} onChange={(e) => handleInputChange("yearOfStudy", e.target.value)} placeholder="Year of Study" className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm" required disabled={!hasAdminAccess} />
+            <input value={form.degreeProgram} onChange={(e) => handleInputChange("degreeProgram", e.target.value)} placeholder="Degree Program" className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm" disabled={!hasAdminAccess} />
+            <textarea value={form.bio} onChange={(e) => handleInputChange("bio", e.target.value)} placeholder="Bio" className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm" rows={2} disabled={!hasAdminAccess} />
 
-            <select value={form.role} onChange={(e) => handleInputChange("role", e.target.value)} className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm">
+            <select value={form.role} onChange={(e) => handleInputChange("role", e.target.value)} className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm" disabled={!hasAdminAccess}>
               <option value="STUDENT">STUDENT</option>
               <option value="CLUB_ADMIN">CLUB_ADMIN</option>
               <option value="SYSTEM_ADMIN">SYSTEM_ADMIN</option>
             </select>
 
             <label className="flex items-center gap-2 text-sm text-slate-700">
-              <input type="checkbox" checked={form.isActive} onChange={(e) => handleInputChange("isActive", e.target.checked)} /> Active
+              <input type="checkbox" checked={form.isActive} onChange={(e) => handleInputChange("isActive", e.target.checked)} disabled={!hasAdminAccess} /> Active
             </label>
             <label className="flex items-center gap-2 text-sm text-slate-700">
-              <input type="checkbox" checked={form.isEmailVerified} onChange={(e) => handleInputChange("isEmailVerified", e.target.checked)} /> Email Verified
+              <input type="checkbox" checked={form.isEmailVerified} onChange={(e) => handleInputChange("isEmailVerified", e.target.checked)} disabled={!hasAdminAccess} /> Email Verified
             </label>
 
             <div className="flex gap-2">
-              <button type="submit" disabled={isSaving} className="flex-1 px-3 py-2 rounded-lg bg-indigo-600 text-white text-sm font-semibold hover:bg-indigo-700 disabled:opacity-60">
+              <button type="submit" disabled={isSaving || !hasAdminAccess} className="flex-1 px-3 py-2 rounded-lg bg-indigo-600 text-white text-sm font-semibold hover:bg-indigo-700 disabled:opacity-60">
                 {selectedUserId ? "Update User" : "Create User"}
               </button>
               <button type="button" onClick={resetForm} className="px-3 py-2 rounded-lg border border-slate-200 text-sm font-semibold">
@@ -363,6 +408,7 @@ const AdminPanel = () => {
               value={rewardForm.badgeId}
               onChange={(e) => setRewardForm((prev) => ({ ...prev, badgeId: e.target.value }))}
               className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm"
+              disabled={!hasAdminAccess}
             >
               <option value="">Select Badge (optional)</option>
               {badges.map((badge) => (
@@ -375,6 +421,7 @@ const AdminPanel = () => {
               onChange={(e) => setRewardForm((prev) => ({ ...prev, certificateTitle: e.target.value }))}
               placeholder="Certificate Title (optional)"
               className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm"
+              disabled={!hasAdminAccess}
             />
 
             <input
@@ -382,9 +429,10 @@ const AdminPanel = () => {
               onChange={(e) => setRewardForm((prev) => ({ ...prev, issuer: e.target.value }))}
               placeholder="Issuer"
               className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm"
+              disabled={!hasAdminAccess}
             />
 
-            <button type="submit" className="w-full px-3 py-2 rounded-lg bg-emerald-600 text-white text-sm font-semibold hover:bg-emerald-700">
+            <button type="submit" disabled={!hasAdminAccess} className="w-full px-3 py-2 rounded-lg bg-emerald-600 text-white text-sm font-semibold hover:bg-emerald-700 disabled:opacity-60">
               Assign Reward
             </button>
 

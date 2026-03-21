@@ -4,6 +4,13 @@ import dotenv from "dotenv";
 
 dotenv.config();
 
+const normalizeRole = (role) => {
+  const value = String(role || "").trim().toUpperCase();
+  if (value === "SYSTEM_ADMIN" || value === "ADMIN") return "SYSTEM_ADMIN";
+  if (value === "CLUB_ADMIN") return "CLUB_ADMIN";
+  return "STUDENT";
+};
+
 export const protect = async (req, res, next) => {
   let token;
 
@@ -34,7 +41,10 @@ export const protect = async (req, res, next) => {
 };
 
 export const authorizeRoles = (...roles) => (req, res, next) => {
-  if (!req.user || !roles.includes(req.user.role)) {
+  const allowedRoles = roles.map(normalizeRole);
+  const currentRole = normalizeRole(req.user?.role);
+
+  if (!req.user || !allowedRoles.includes(currentRole)) {
     return res.status(403).json({ message: "Forbidden: insufficient permissions" });
   }
 

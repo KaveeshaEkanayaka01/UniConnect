@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigate, Outlet } from 'react-router-dom';
 import {
-  LayoutDashboard, User, Zap, Trophy, Clock, Users, Mail, Settings,
-  ChevronLeft, ChevronRight, LogOut, HelpCircle, ShieldCheck, Circle, Shield
+  LayoutDashboard, User, Zap, Trophy, Users,
+  ChevronLeft, ChevronRight, LogOut, ShieldCheck
 } from 'lucide-react';
 import SidebarLink from './Sidebar';
 import Header from './Header';
@@ -46,14 +46,12 @@ const Layout = ( ) => {
       { to: '/profile', label: 'Profile', icon: User },
       { to: '/skills', label: 'Skills', icon: Zap },
       { to: '/badges', label: 'Badges', icon: Trophy },
-      { to: '/activity', label: 'Activity', icon: Clock },
     ]},
     { section: 'Network', items: [
       { to: '/mentors', label: 'Find Mentors', icon: Users },
       { to: '/my-clubs', label: 'My Clubs', icon: ShieldCheck },
     ]},
     { section: 'Configure', items: [
-      { to: '/admin', label: 'Admin Panel', icon: Shield },
     ]},
   ];
 

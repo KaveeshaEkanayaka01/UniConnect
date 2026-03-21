@@ -17,7 +17,9 @@ const LoginPage = () => {
       localStorage.setItem("token", res.data.token);
       localStorage.setItem("user", JSON.stringify(res.data.user));
 
-      navigate('/dashboard');
+      const role = String(res.data?.user?.role || "").trim().toUpperCase();
+      const isAdmin = role === "SYSTEM_ADMIN" || role === "CLUB_ADMIN";
+      navigate(isAdmin ? "/admin" : "/dashboard");
     } catch (err) {
       alert(err.response?.data?.message || "Login failed");
     } finally {

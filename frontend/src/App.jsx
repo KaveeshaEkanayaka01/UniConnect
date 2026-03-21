@@ -9,7 +9,6 @@ import Profile from "./components/Profile";
 import Layout from "./components/Layout";
 import ProfileEditPage from "./components/EditProfile";
 import MentorListPage from "./components/MentorList";
-import AccountSettingsPage from "./components/AccountSettingsPage";
 import AddSkillPage from "./components/AddSkillsPage";
 import SkillsListPage from "./components/SkillListPage";
 import ChangePasswordPage from "./components/ChangePasswordPage";
@@ -28,6 +27,15 @@ function App() {
         <Route path="/forgot-password" element={<ForgotPasswordPage />} />
         <Route path="/reset-password/:token" element={<ResetPasswordPage />} />
 
+        <Route
+          path="/admin"
+          element={
+            <ProtectedRoute allowedRoles={["SYSTEM_ADMIN", "CLUB_ADMIN"]}>
+              <AdminPanel />
+            </ProtectedRoute>
+          }
+        />
+
          <Route
           element={
             <ProtectedRoute>
@@ -40,10 +48,8 @@ function App() {
           <Route path="/profile/edit" element={<ProfileEditPage />} />
           <Route path="/mentors" element={<MentorListPage />} />
           <Route path="/my-clubs" element={<MyClubs />} />
-          <Route path="/admin" element={<AdminPanel />} />
           <Route path="/skills" element={<SkillsListPage />} />
           <Route path="/skills/add" element={<AddSkillPage />} />
-          <Route path="/settings" element={<AccountSettingsPage />} />
           <Route path="/settings/password" element={<ChangePasswordPage />} />
           
         </Route>
