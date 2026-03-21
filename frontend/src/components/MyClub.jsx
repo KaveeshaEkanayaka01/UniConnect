@@ -1,9 +1,9 @@
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import API from './Auth/axios';
 import { 
   Search, 
-  Plus, 
   Users, 
   MessageSquare, 
   Calendar, 
@@ -16,60 +16,21 @@ import {
   Zap
 } from 'lucide-react';
 
-interface  Club  {
-  id: string;
-  name: string;
-  category: string;
-  members: number;
-  image: string;
-  description: string;
-  isPrivate: boolean;
-  role: 'President' | 'Member' | 'Admin' | 'None';
-  tags: string[];
-  unreadMessages?: number;
-  upcomingEvent?: string;
-}
+const FALLBACK_CLUB_IMAGE = 'https://picsum.photos/seed/uniclub/400/200';
 
-const myClubs = [
-  {
-    id: '1',
-    name: 'AI & Robotics Society',
-    category: 'Technology',
-    members: 1240,
-    image: 'https://picsum.photos/seed/robotics/400/200',
-    description: 'Exploring the future of automation and artificial intelligence through hands-on projects.',
-    isPrivate: false,
-    role: 'President',
-    tags: ['AI', 'Robotics', 'Coding'],
-    unreadMessages: 12,
-    upcomingEvent: 'Hackathon Prep - Tomorrow'
-  },
-  {
-    id: '2',
-    name: 'Design Collective',
-    category: 'Creative',
-    members: 850,
-    image: 'https://picsum.photos/seed/design/400/200',
-    description: 'A community for UI/UX designers, illustrators, and creative thinkers to collaborate.',
-    isPrivate: false,
-    role: 'Member',
-    tags: ['UI/UX', 'Branding', 'Art'],
-    unreadMessages: 5,
-    upcomingEvent: 'Portfolio Review - Friday'
-  },
-  {
-    id: '3',
-    name: 'Entrepreneurship Hub',
-    category: 'Business',
-    members: 2100,
-    image: 'https://picsum.photos/seed/business/400/200',
-    description: 'Empowering students to build startups and connect with industry leaders.',
-    isPrivate: true,
-    role: 'Admin',
-    tags: ['Startups', 'Networking', 'VC'],
-    upcomingEvent: 'Pitch Night - Mar 15'
-  }
-];
+const normalizeClub = (club, index) => ({
+  id: String(club?._id || club?.id || `club-${index}`),
+  name: club?.name || 'Unnamed Club',
+  category: club?.category || 'General',
+  members: Number.isFinite(Number(club?.members)) ? Number(club.members) : 0,
+  image: club?.image || FALLBACK_CLUB_IMAGE,
+  description: club?.description || 'No description available yet.',
+  isPrivate: Boolean(club?.isPrivate),
+  role: ['President', 'Member', 'Admin'].includes(club?.role) ? club.role : 'Member',
+  tags: Array.isArray(club?.tags) ? club.tags : [],
+  unreadMessages: Number.isFinite(Number(club?.unreadMessages)) ? Number(club.unreadMessages) : 0,
+  upcomingEvent: typeof club?.upcomingEvent === 'string' ? club.upcomingEvent : '',
+});
 
 const recommendedClubs = [
   {
@@ -98,9 +59,34 @@ const recommendedClubs = [
 
 const MyClubs  = () => {
   const [searchQuery, setSearchQuery] = useState('');
-  const [activeTab, setActiveTab] = useState<'my' | 'discover'>('my');
+  const [activeTab, setActiveTab] = useState('my');
+  const [myClubs, setMyClubs] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchJoinedClubs = async () => {
+      try {
+        const { data } = await API.get('/student/dashboard');
+        const joinedClubs = Array.isArray(data?.profile?.joinedClubs)
+          ? data.profile.joinedClubs
+          : [];
+        setMyClubs(joinedClubs.map(normalizeClub));
+      } catch (error) {
+        setMyClubs([]);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchJoinedClubs();
+  }, []);
 
   const filteredMyClubs = myClubs.filter(club => 
+    club.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    club.category.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  const filteredRecommendedClubs = recommendedClubs.filter(club => 
     club.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     club.category.toLowerCase().includes(searchQuery.toLowerCase())
   );
@@ -117,15 +103,8 @@ const MyClubs  = () => {
         <div>
           <h1 className="text-4xl font-extrabold tracking-tight text-slate-900">My Clubs</h1>
           <p className="mt-2 text-slate-500 max-w-lg">
-            Manage your memberships, lead your societies, and discover new communities on campus.
+            View your memberships and discover new communities on campus.
           </p>
-        </div>
-        
-        <div className="flex items-center gap-3">
-          <button className="flex items-center gap-2 bg-indigo-600 text-white px-6 py-2.5 rounded-xl font-bold text-sm shadow-lg shadow-indigo-200 hover:bg-indigo-700 transition-all active:scale-95">
-            <Plus size={18} />
-            Create Club
-          </button>
         </div>
       </div>
 
@@ -173,6 +152,17 @@ const MyClubs  = () => {
             exit={{ opacity: 0, x: 20 }}
             className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-8"
           >
+            {isLoading && (
+              <div className="md:col-span-2 xl:col-span-3 bg-white rounded-3xl border border-slate-100 p-8 text-center text-slate-500 font-semibold">
+                Loading your clubs...
+              </div>
+            )}
+            {!isLoading && filteredMyClubs.length === 0 && (
+              <div className="md:col-span-2 xl:col-span-3 bg-white rounded-3xl border border-slate-100 p-8 text-center">
+                <h3 className="text-xl font-black text-slate-900 mb-2">No joined clubs yet</h3>
+                <p className="text-sm text-slate-500">Switch to Discover to find clubs and join communities.</p>
+              </div>
+            )}
             {filteredMyClubs.map((club) => (
               <div key={club.id} className="group bg-white rounded-[32px] border border-slate-100 shadow-sm hover:shadow-xl hover:shadow-indigo-500/5 transition-all duration-500 overflow-hidden flex flex-col">
                 {/* Club Image/Header */}
@@ -304,7 +294,7 @@ const MyClubs  = () => {
                 <button className="text-sm font-bold text-indigo-600 hover:text-indigo-700">View All Suggestions</button>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                {recommendedClubs.map(club => (
+                {filteredRecommendedClubs.map(club => (
                   <div key={club.id} className="bg-white p-6 rounded-[32px] border border-slate-100 shadow-sm hover:shadow-lg transition-all flex gap-6 items-center group">
                     <img src={club.image} className="w-24 h-24 rounded-2xl object-cover group-hover:scale-105 transition-transform" alt={club.name} />
                     <div className="flex-1">

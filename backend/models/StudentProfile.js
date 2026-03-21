@@ -25,6 +25,54 @@ const skillDetailSchema = new mongoose.Schema(
   { _id: true }
 );
 
+const joinedClubSchema = new mongoose.Schema(
+  {
+    name: {
+      type: String,
+      required: true,
+      trim: true,
+    },
+    category: {
+      type: String,
+      default: "General",
+      trim: true,
+    },
+    description: {
+      type: String,
+      default: "",
+      trim: true,
+    },
+    members: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
+    role: {
+      type: String,
+      enum: ["President", "Member", "Admin"],
+      default: "Member",
+    },
+    image: {
+      type: String,
+      default: "",
+      trim: true,
+    },
+    isPrivate: {
+      type: Boolean,
+      default: false,
+    },
+    tags: {
+      type: [String],
+      default: [],
+    },
+    joinedAt: {
+      type: Date,
+      default: Date.now,
+    },
+  },
+  { _id: true }
+);
+
 const studentProfileSchema = new mongoose.Schema(
   {
     user: {
@@ -63,6 +111,11 @@ const studentProfileSchema = new mongoose.Schema(
         ref: "Badge",
       },
     ],
+
+    joinedClubs: {
+      type: [joinedClubSchema],
+      default: [],
+    },
   },
   { timestamps: true }
 );

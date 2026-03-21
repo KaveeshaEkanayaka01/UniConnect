@@ -50,6 +50,7 @@ const Layout = ( ) => {
     ]},
     { section: 'Network', items: [
       { to: '/mentors', label: 'Find Mentors', icon: Users },
+      { to: '/my-clubs', label: 'My Clubs', icon: ShieldCheck },
       { to: '/mentorship', label: 'Inbox', icon: Mail },
     ]},
     { section: 'Configure', items: [

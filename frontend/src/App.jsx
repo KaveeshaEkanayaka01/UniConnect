@@ -15,6 +15,7 @@ import SkillsListPage from "./components/SkillListPage";
 import ChangePasswordPage from "./components/ChangePasswordPage";
 import ResetPasswordPage from "./components/ResetPasswordPage";
 import ForgotPasswordPage from "./components/ForgotPasswordPage";
+import MyClubs from "./components/MyClub";
 
 function App() {
   return (
@@ -37,6 +38,7 @@ function App() {
           <Route path="/profile" element={<Profile />} />
           <Route path="/profile/edit" element={<ProfileEditPage />} />
           <Route path="/mentors" element={<MentorListPage />} />
+          <Route path="/my-clubs" element={<MyClubs />} />
           <Route path="/skills" element={<SkillsListPage />} />
           <Route path="/skills/add" element={<AddSkillPage />} />
           <Route path="/settings" element={<AccountSettingsPage />} />

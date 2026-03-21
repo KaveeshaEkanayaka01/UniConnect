@@ -26,6 +26,7 @@ const DashboardPage = () => {
   const [user, setUser] = useState(null);
   const [profile , setProfile] = useState(null);
   const [mentorNames, setMentorNames] = useState([]);
+  const [joinedClubs, setJoinedClubs] = useState([]);
   const navigate = useNavigate();
   const displayFaculty = profile?.faculty || user?.faculty || "Not set";
   const displayYear = profile?.yearOfStudy || user?.yearOfStudy || "Not set";
@@ -40,6 +41,10 @@ const DashboardPage = () => {
 
         setUser(dashboardRes.data.user);
         setProfile(dashboardRes.data.profile);
+        const clubs = Array.isArray(dashboardRes.data?.profile?.joinedClubs)
+          ? dashboardRes.data.profile.joinedClubs
+          : [];
+        setJoinedClubs(clubs);
         const mentors = Array.isArray(mentorsRes.data) ? mentorsRes.data : [];
         const names = mentors
           .map((item) => item?.mentor?.fullName)
@@ -92,6 +97,7 @@ const DashboardPage = () => {
       {/* Stats */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
         <StatCard title="Role" value={user.role} icon={Users} color="indigo" />
+        <StatCard title="Joined Clubs" value={joinedClubs.length} icon={Users} color="sky" />
         <StatCard title="Account Status" value={user.isActive ? "Active" : "Inactive"} icon={TrendingUp} color="emerald" />
         <StatCard title="Email Verified" value={user.isEmailVerified ? "Yes" : "No"} icon={MessageSquare} color="amber" />
         <StatCard title="Member Since" value={new Date(user.createdAt).toLocaleDateString()} icon={Calendar} color="rose" />
@@ -115,7 +121,7 @@ const DashboardPage = () => {
           </Link>
         </div>
 
-        {/* Activity Feed (mock for now) */}
+        {/* Activity Feed  */}
         <div className="bg-white rounded-2xl border shadow-sm p-6">
           <h3 className="text-lg font-bold text-slate-800 mb-4">Recent Activity</h3>
           <div className="space-y-4">
@@ -137,6 +143,21 @@ const DashboardPage = () => {
             </div>
           ) : (
             <p className="text-sm text-slate-500">No mentors found yet.</p>
+          )}
+        </div>
+
+        <div className="bg-white rounded-2xl border shadow-sm p-6">
+          <h3 className="text-lg font-bold text-slate-800 mb-4">Your Clubs</h3>
+          {joinedClubs.length > 0 ? (
+            <div className="space-y-3">
+              {joinedClubs.slice(0, 5).map((club) => (
+                <div key={club._id || club.id || club.name} className="text-sm text-slate-700 font-medium">
+                  {club.name}
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-sm text-slate-500">No joined clubs yet.</p>
           )}
         </div>
       </div>
