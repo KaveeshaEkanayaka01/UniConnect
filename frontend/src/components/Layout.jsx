@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigate, Outlet } from 'react-router-dom';
 import {
   LayoutDashboard, User, Zap, Trophy, Clock, Users, Mail, Settings,
-  ChevronLeft, ChevronRight, LogOut, HelpCircle, ShieldCheck, Circle
+  ChevronLeft, ChevronRight, LogOut, HelpCircle, ShieldCheck, Circle, Shield
 } from 'lucide-react';
 import SidebarLink from './Sidebar';
 import Header from './Header';
@@ -51,11 +51,9 @@ const Layout = ( ) => {
     { section: 'Network', items: [
       { to: '/mentors', label: 'Find Mentors', icon: Users },
       { to: '/my-clubs', label: 'My Clubs', icon: ShieldCheck },
-      { to: '/mentorship', label: 'Inbox', icon: Mail },
     ]},
     { section: 'Configure', items: [
-      { to: '/settings', label: 'Settings', icon: Settings },
-      { to: '/help', label: 'Help Center', icon: HelpCircle },
+      { to: '/admin', label: 'Admin Panel', icon: Shield },
     ]},
   ];
 

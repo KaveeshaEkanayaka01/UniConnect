@@ -73,6 +73,26 @@ const joinedClubSchema = new mongoose.Schema(
   { _id: true }
 );
 
+const certificateSchema = new mongoose.Schema(
+  {
+    title: {
+      type: String,
+      required: true,
+      trim: true,
+    },
+    issuer: {
+      type: String,
+      default: "UniConnect",
+      trim: true,
+    },
+    issuedAt: {
+      type: Date,
+      default: Date.now,
+    },
+  },
+  { _id: true }
+);
+
 const studentProfileSchema = new mongoose.Schema(
   {
     user: {
@@ -114,6 +134,11 @@ const studentProfileSchema = new mongoose.Schema(
 
     joinedClubs: {
       type: [joinedClubSchema],
+      default: [],
+    },
+
+    certificates: {
+      type: [certificateSchema],
       default: [],
     },
   },

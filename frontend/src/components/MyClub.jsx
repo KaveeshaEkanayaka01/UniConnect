@@ -7,7 +7,6 @@ import {
   Users, 
   MessageSquare, 
   Calendar, 
-  Star, 
   ArrowRight,
   MoreVertical,
   Filter,
@@ -16,14 +15,12 @@ import {
   Zap
 } from 'lucide-react';
 
-const FALLBACK_CLUB_IMAGE = 'https://picsum.photos/seed/uniclub/400/200';
-
 const normalizeClub = (club, index) => ({
   id: String(club?._id || club?.id || `club-${index}`),
   name: club?.name || 'Unnamed Club',
   category: club?.category || 'General',
   members: Number.isFinite(Number(club?.members)) ? Number(club.members) : 0,
-  image: club?.image || FALLBACK_CLUB_IMAGE,
+  image: club?.image || '',
   description: club?.description || 'No description available yet.',
   isPrivate: Boolean(club?.isPrivate),
   role: ['President', 'Member', 'Admin'].includes(club?.role) ? club.role : 'Member',
@@ -31,31 +28,6 @@ const normalizeClub = (club, index) => ({
   unreadMessages: Number.isFinite(Number(club?.unreadMessages)) ? Number(club.unreadMessages) : 0,
   upcomingEvent: typeof club?.upcomingEvent === 'string' ? club.upcomingEvent : '',
 });
-
-const recommendedClubs = [
-  {
-    id: '4',
-    name: 'Data Science Guild',
-    category: 'Technology',
-    members: 920,
-    image: 'https://picsum.photos/seed/data/400/200',
-    description: 'Deep dive into big data, machine learning, and statistical analysis.',
-    isPrivate: false,
-    role: 'None',
-    tags: ['Python', 'Big Data', 'ML']
-  },
-  {
-    id: '5',
-    name: 'Sustainable Future',
-    category: 'Environment',
-    members: 450,
-    image: 'https://picsum.photos/seed/nature/400/200',
-    description: 'Working towards a greener campus and sustainable living practices.',
-    isPrivate: false,
-    role: 'None',
-    tags: ['Eco', 'Sustainability', 'Action']
-  }
-];
 
 const MyClubs  = () => {
   const [searchQuery, setSearchQuery] = useState('');
@@ -82,11 +54,6 @@ const MyClubs  = () => {
   }, []);
 
   const filteredMyClubs = myClubs.filter(club => 
-    club.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    club.category.toLowerCase().includes(searchQuery.toLowerCase())
-  );
-
-  const filteredRecommendedClubs = recommendedClubs.filter(club => 
     club.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     club.category.toLowerCase().includes(searchQuery.toLowerCase())
   );
@@ -167,11 +134,17 @@ const MyClubs  = () => {
               <div key={club.id} className="group bg-white rounded-[32px] border border-slate-100 shadow-sm hover:shadow-xl hover:shadow-indigo-500/5 transition-all duration-500 overflow-hidden flex flex-col">
                 {/* Club Image/Header */}
                 <div className="relative h-48 overflow-hidden">
-                  <img 
-                    src={club.image} 
-                    alt={club.name} 
-                    className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
-                  />
+                  {club.image ? (
+                    <img 
+                      src={club.image} 
+                      alt={club.name} 
+                      className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
+                    />
+                  ) : (
+                    <div className="w-full h-full bg-slate-100 flex items-center justify-center">
+                      <span className="text-slate-500 text-sm font-bold">No club image</span>
+                    </div>
+                  )}
                   <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
                   
                   <div className="absolute top-4 left-4 flex gap-2">
@@ -196,10 +169,8 @@ const MyClubs  = () => {
                     <div>
                       <h3 className="text-xl font-black text-slate-900 group-hover:text-indigo-600 transition-colors">{club.name}</h3>
                       <div className="flex items-center gap-2 mt-1">
-                        <div className="flex -space-x-2">
-                          {[1, 2, 3].map(i => (
-                            <img key={i} src={`https://picsum.photos/32/32?random=${club.id}${i}`} className="w-6 h-6 rounded-full border-2 border-white" alt="Member" />
-                          ))}
+                        <div className="w-6 h-6 rounded-full bg-slate-100 text-slate-500 flex items-center justify-center">
+                          <Users size={12} />
                         </div>
                         <span className="text-xs font-bold text-slate-400">+{club.members.toLocaleString()} members</span>
                       </div>
@@ -260,60 +231,13 @@ const MyClubs  = () => {
             exit={{ opacity: 0, x: -20 }}
             className="space-y-12"
           >
-            {/* Featured Section */}
-            <div className="relative rounded-[40px] bg-slate-900 p-8 lg:p-12 overflow-hidden">
-              <div className="absolute top-0 right-0 w-1/2 h-full bg-gradient-to-l from-indigo-500/20 to-transparent"></div>
-              <div className="relative z-10 grid lg:grid-cols-2 gap-12 items-center">
-                <div>
-                  <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 text-[10px] font-black uppercase tracking-[0.2em] mb-6">
-                    <Zap size={12} className="fill-current" />
-                    Featured Community
-                  </div>
-                  <h2 className="text-4xl lg:text-5xl font-black text-white mb-6 leading-tight">Join the University <br/> <span className="text-indigo-400">Debate Union</span></h2>
-                  <p className="text-slate-400 text-lg mb-8 max-w-md leading-relaxed">Master the art of persuasion, critical thinking, and public speaking with the campus's most prestigious society.</p>
-                  <div className="flex flex-wrap gap-4">
-                    <button className="bg-indigo-600 text-white px-8 py-3.5 rounded-2xl font-black text-sm shadow-xl shadow-indigo-500/20 hover:bg-indigo-700 transition-all active:scale-95">
-                      Apply to Join
-                    </button>
-                    <button className="bg-white/5 text-white border border-white/10 px-8 py-3.5 rounded-2xl font-black text-sm hover:bg-white/10 transition-all">
-                      View Society
-                    </button>
-                  </div>
-                </div>
-                <div className="hidden lg:block relative">
-                  <div className="absolute inset-0 bg-indigo-500/20 blur-[100px] rounded-full"></div>
-                  <img src="https://picsum.photos/seed/debate/600/400" className="relative z-10 rounded-3xl shadow-2xl transform rotate-2 hover:rotate-0 transition-transform duration-700" alt="Featured" />
-                </div>
+            <div className="bg-white rounded-3xl border border-slate-100 p-8 text-center">
+              <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-indigo-50 border border-indigo-100 text-indigo-500 text-[10px] font-black uppercase tracking-[0.2em] mb-4">
+                <Zap size={12} className="fill-current" />
+                Discover Clubs
               </div>
-            </div>
-
-            {/* Recommended Grid */}
-            <div>
-              <div className="flex items-center justify-between mb-8">
-                <h3 className="text-2xl font-black text-slate-900">Recommended for You</h3>
-                <button className="text-sm font-bold text-indigo-600 hover:text-indigo-700">View All Suggestions</button>
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                {filteredRecommendedClubs.map(club => (
-                  <div key={club.id} className="bg-white p-6 rounded-[32px] border border-slate-100 shadow-sm hover:shadow-lg transition-all flex gap-6 items-center group">
-                    <img src={club.image} className="w-24 h-24 rounded-2xl object-cover group-hover:scale-105 transition-transform" alt={club.name} />
-                    <div className="flex-1">
-                      <div className="flex items-center justify-between mb-1">
-                        <span className="text-[10px] font-black text-indigo-500 uppercase tracking-widest">{club.category}</span>
-                        <div className="flex items-center gap-1 text-slate-400 text-[10px] font-bold">
-                          <Users size={12} />
-                          {club.members}
-                        </div>
-                      </div>
-                      <h4 className="text-lg font-black text-slate-900 mb-2">{club.name}</h4>
-                      <p className="text-xs text-slate-500 line-clamp-1 mb-4">{club.description}</p>
-                      <button className="text-xs font-black text-indigo-600 flex items-center gap-1 group/btn">
-                        Learn More <ArrowRight size={14} className="group-hover/btn:translate-x-1 transition-transform" />
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
+              <h3 className="text-2xl font-black text-slate-900 mb-2">No club suggestions available</h3>
+              <p className="text-sm text-slate-500">Sample clubs and sample images were removed. Real discover data can be connected later.</p>
             </div>
           </motion.div>
         )}
