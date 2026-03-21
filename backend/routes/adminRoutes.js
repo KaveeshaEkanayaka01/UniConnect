@@ -1,6 +1,7 @@
 import express from "express";
 import {
   assignRewards,
+  createBadge,
   createUserByAdmin,
   deleteUserByAdmin,
   getAllBadges,
@@ -20,6 +21,7 @@ router.put("/users/:userId", updateUserByAdmin);
 router.delete("/users/:userId", deleteUserByAdmin);
 
 router.get("/badges", getAllBadges);
+router.post("/badges", createBadge);
 router.post("/users/:userId/rewards", assignRewards);
 
 export default router;

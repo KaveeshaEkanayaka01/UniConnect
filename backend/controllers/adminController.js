@@ -194,6 +194,36 @@ export const getAllBadges = async (req, res) => {
   }
 };
 
+export const createBadge = async (req, res) => {
+  try {
+    const { title, description, icon, criteria } = req.body;
+
+    if (!title || !title.trim()) {
+      return res.status(400).json({ message: "Badge title is required" });
+    }
+
+    const normalizedTitle = title.trim();
+    const existingBadge = await Badge.findOne({
+      title: { $regex: `^${normalizedTitle.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}$`, $options: "i" },
+    });
+
+    if (existingBadge) {
+      return res.status(400).json({ message: "Badge with this title already exists" });
+    }
+
+    const badge = await Badge.create({
+      title: normalizedTitle,
+      description: description?.trim() || "",
+      icon: icon?.trim() || "",
+      criteria: criteria?.trim() || "",
+    });
+
+    res.status(201).json(badge);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
 export const assignRewards = async (req, res) => {
   try {
     const { userId } = req.params;

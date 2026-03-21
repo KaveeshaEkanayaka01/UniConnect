@@ -16,6 +16,7 @@ import ResetPasswordPage from "./components/ResetPasswordPage";
 import ForgotPasswordPage from "./components/ForgotPasswordPage";
 import MyClubs from "./components/MyClub";
 import AdminPanel from "./components/AdminPanel";
+import BadgeCertificationPage from "./components/BadgeCertificationPage";
 
 function App() {
   return (
@@ -48,6 +49,7 @@ function App() {
           <Route path="/profile/edit" element={<ProfileEditPage />} />
           <Route path="/mentors" element={<MentorListPage />} />
           <Route path="/my-clubs" element={<MyClubs />} />
+          <Route path="/badges" element={<BadgeCertificationPage />} />
           <Route path="/skills" element={<SkillsListPage />} />
           <Route path="/skills/add" element={<AddSkillPage />} />
           <Route path="/settings/password" element={<ChangePasswordPage />} />

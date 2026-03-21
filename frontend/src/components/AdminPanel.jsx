@@ -55,6 +55,13 @@ const AdminPanel = () => {
     issuer: "UniConnect",
   });
 
+  const [badgeForm, setBadgeForm] = useState({
+    title: "",
+    description: "",
+    criteria: "",
+    icon: "",
+  });
+
   const resetForm = () => {
     setSelectedUserId("");
     setForm({
@@ -249,6 +256,34 @@ const AdminPanel = () => {
     }
   };
 
+  const handleCreateBadge = async (event) => {
+    event.preventDefault();
+
+    if (!hasAdminAccess) {
+      setMessage("You do not have permission to create badges.");
+      return;
+    }
+
+    if (!badgeForm.title.trim()) {
+      setMessage("Badge title is required");
+      return;
+    }
+
+    try {
+      await API.post("/admin/badges", badgeForm);
+      setBadgeForm({
+        title: "",
+        description: "",
+        criteria: "",
+        icon: "",
+      });
+      setMessage("Badge created successfully");
+      await loadAdminData();
+    } catch (error) {
+      setMessage(error?.response?.data?.message || "Failed to create badge");
+    }
+  };
+
   return (
     <div className="space-y-8">
       <div className="bg-white rounded-3xl border border-slate-200 p-7">
@@ -361,6 +396,53 @@ const AdminPanel = () => {
         </div>
 
         <div className="space-y-6">
+          <form onSubmit={handleCreateBadge} className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm space-y-3">
+            <h3 className="font-black text-slate-900 mb-1 flex items-center gap-2">
+              <BadgeCheck size={16} /> Create Badge
+            </h3>
+
+            <input
+              value={badgeForm.title}
+              onChange={(e) => setBadgeForm((prev) => ({ ...prev, title: e.target.value }))}
+              placeholder="Badge Title"
+              className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm"
+              required
+              disabled={!hasAdminAccess}
+            />
+
+            <input
+              value={badgeForm.description}
+              onChange={(e) => setBadgeForm((prev) => ({ ...prev, description: e.target.value }))}
+              placeholder="Description"
+              className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm"
+              disabled={!hasAdminAccess}
+            />
+
+            <input
+              value={badgeForm.criteria}
+              onChange={(e) => setBadgeForm((prev) => ({ ...prev, criteria: e.target.value }))}
+              placeholder="Criteria"
+              className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm"
+              disabled={!hasAdminAccess}
+            />
+
+            <input
+              value={badgeForm.icon}
+              onChange={(e) => setBadgeForm((prev) => ({ ...prev, icon: e.target.value }))}
+              placeholder="Icon URL or name (optional)"
+              className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm"
+              disabled={!hasAdminAccess}
+            />
+
+            <button
+              type="submit"
+              disabled={!hasAdminAccess}
+              className="w-full px-3 py-2 rounded-lg bg-violet-600 text-white text-sm font-semibold hover:bg-violet-700 disabled:opacity-60"
+            >
+              Add Badge To Collection
+            </button>
+          </form>
+
           <form onSubmit={handleSaveUser} className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm space-y-3">
             <h3 className="font-black text-slate-900 mb-1 flex items-center gap-2">
               <UserPlus size={16} /> {selectedUserId ? "Update User" : "Add New User"}
