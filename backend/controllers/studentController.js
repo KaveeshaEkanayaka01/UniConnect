@@ -204,6 +204,41 @@ export const getDashboard = async (req, res) => {
   }
 };
 
+ // DELETE CERTIFICATE
+ export const deleteCertificate = async (req, res) => {
+  try {
+    const { certificateId } = req.params;
+
+    if (
+      !certificateId ||
+      certificateId === "undefined" ||
+      certificateId === "null" ||
+      !mongoose.Types.ObjectId.isValid(certificateId)
+    ) {
+      return res.status(400).json({ message: "Valid certificateId is required" });
+    }
+
+    const certificateObjectId = new mongoose.Types.ObjectId(certificateId);
+
+    const profile = await StudentProfile.findOneAndUpdate(
+      { user: req.user._id },
+      { $pull: { certificates: { _id: certificateObjectId } } },
+      { new: true }
+    )
+      .populate("skills")
+      .populate("skillDetails.skill")
+      .populate("badges");
+
+    if (!profile) {
+      return res.status(404).json({ message: "Profile not found" });
+    }
+
+    res.status(200).json({ message: "Certificate deleted successfully", profile });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
  // GET BADGES
  export const getBadges = async (req, res) => {
   try {

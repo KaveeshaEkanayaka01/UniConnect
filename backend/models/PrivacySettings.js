@@ -17,11 +17,7 @@ const privacySettingsSchema = new mongoose.Schema(
       type: Boolean,
       default: true,
     },
-
-    allowMentorshipRequests: {
-      type: Boolean,
-      default: true,
-    },
+ 
   },
   { timestamps: true }
 );

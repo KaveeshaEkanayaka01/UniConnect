@@ -2,6 +2,7 @@ import bcrypt from "bcryptjs";
 import User from "../models/User.js";
 import StudentProfile from "../models/StudentProfile.js";
 import Badge from "../models/Badge.js";
+import sendEmail from "../utils/sendEmail.js";
 
 const toYearNumber = (value) => {
   const parsed = Number(value);
@@ -227,13 +228,20 @@ export const createBadge = async (req, res) => {
 export const assignRewards = async (req, res) => {
   try {
     const { userId } = req.params;
-    const { badgeId, certificateTitle, issuer } = req.body;
+    const { badgeId, certificateTitle, issuer, credentialId, verificationUrl } = req.body;
+
+    const user = await User.findById(userId).select("fullName email");
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
 
     const profile = await StudentProfile.findOneAndUpdate(
       { user: userId },
       {},
       { new: true, upsert: true, setDefaultsOnInsert: true }
     );
+
+    const notificationLines = [];
 
     if (badgeId) {
       const badge = await Badge.findById(badgeId);
@@ -247,18 +255,73 @@ export const assignRewards = async (req, res) => {
 
       if (!alreadyHasBadge) {
         profile.badges.push(badgeId);
+        notificationLines.push(
+          `- New badge awarded: ${badge.title}`,
+          badge.description ? `  Description: ${badge.description}` : null,
+          badge.criteria ? `  Criteria: ${badge.criteria}` : null
+        );
       }
     }
 
     if (certificateTitle && certificateTitle.trim()) {
-      profile.certificates.push({
+      const certificateData = {
         title: certificateTitle.trim(),
         issuer: issuer?.trim() || "UniConnect",
-      });
+        credentialId: credentialId?.trim() || "",
+        verificationUrl: verificationUrl?.trim() || "",
+        certificateUrl: "",
+        issuedAt: new Date(),
+      };
+
+      // If a certificate image was uploaded, set the URL
+      if (req.file) {
+        certificateData.certificateUrl = `/uploads/certificates/${req.file.filename}`;
+      }
+
+      profile.certificates.push(certificateData);
+
+      notificationLines.push(
+        `- New certificate issued: ${certificateData.title}`,
+        `  Issuer: ${certificateData.issuer}`,
+        certificateData.credentialId
+          ? `  Credential ID: ${certificateData.credentialId}`
+          : null,
+        certificateData.verificationUrl
+          ? `  Verification URL: ${certificateData.verificationUrl}`
+          : null
+      );
     }
 
     await profile.save();
     await profile.populate("badges");
+
+    const emailLines = notificationLines.filter(Boolean);
+    if (emailLines.length > 0) {
+      try {
+        await sendEmail({
+          to: user.email,
+          subject: "UniConnect Reward Update",
+          text: [
+            `Hello ${user.fullName || "Student"},`,
+            "",
+            "You have received new achievement updates in your UniConnect account:",
+            "",
+            ...emailLines,
+            "",
+            "Please log in to your dashboard to view full details.",
+            "",
+            "Regards,",
+            "UniConnect Team",
+          ].join("\n"),
+        });
+      } catch (emailError) {
+        console.error("Reward email notification failed:", {
+          message: emailError?.message,
+          code: emailError?.code,
+          response: emailError?.response,
+        });
+      }
+    }
 
     res.status(200).json(profile);
   } catch (error) {

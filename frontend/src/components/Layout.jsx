@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigate, Outlet } from 'react-router-dom';
 import {
   LayoutDashboard, User, Zap, Trophy, Users,
-  ChevronLeft, ChevronRight, LogOut, ShieldCheck
+  ChevronLeft, ChevronRight, LogOut, ShieldCheck, Settings
 } from 'lucide-react';
 import SidebarLink from './Sidebar';
 import Header from './Header';
@@ -48,10 +48,11 @@ const Layout = ( ) => {
       { to: '/badges', label: 'Badges', icon: Trophy },
     ]},
     { section: 'Network', items: [
-      { to: '/mentors', label: 'Find Mentors', icon: Users },
-      { to: '/my-clubs', label: 'My Clubs', icon: ShieldCheck },
+       
+      { to: '/my-clubs', label: 'My Clubs', icon: ShieldCheck }
     ]},
     { section: 'Configure', items: [
+      { to: '/settings', label: 'Settings', icon: Settings },
     ]},
   ];
 
@@ -60,7 +61,7 @@ const Layout = ( ) => {
       {/* Sidebar */}
       <aside className={`fixed lg:static inset-y-0 left-0 z-50 bg-white border-r transition-all ${isSidebarOpen ? 'w-72' : 'w-24'} ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}`}>
         <div className="h-20 flex items-center px-6 border-b">
-          <span className="font-black text-xl text-indigo-600">UniClub</span>
+          <span className="font-black text-xl text-indigo-600">UniConnect</span>
         </div>
 
         <nav className="p-4 space-y-6">
@@ -104,6 +105,7 @@ const Layout = ( ) => {
         <Header
           onToggleSidebar={() => setIsMobileMenuOpen((v) => !v)}
           userName={storedUser.fullName || storedUser.name}
+          avatar={storedUser.avatar}
           onLogout={handleLogout}
         />
         <main className="flex-1 overflow-y-auto p-6 lg:p-10 animate-in fade-in slide-in-from-bottom-2 duration-500">

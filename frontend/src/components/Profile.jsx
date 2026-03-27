@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { Award, Sparkles, CalendarDays, BadgeCheck } from "lucide-react";
 import API from "../components/Auth/axios";
 
 const ProfileViewPage = () => {
@@ -44,6 +45,9 @@ const ProfileViewPage = () => {
         category: skill?.category || "",
         relatedActivity: "",
       }));
+
+  const badges = Array.isArray(profile.badges) ? profile.badges : [];
+  const latestBadge = badges[0] || null;
 
   return (
     <div className="max-w-4xl mx-auto space-y-8 p-6">
@@ -109,24 +113,36 @@ const ProfileViewPage = () => {
       </section>
 
       {/* Badges */}
-      <section className="bg-white p-6 rounded-xl shadow border">
-        <h3 className="text-lg font-bold mb-3">Badges</h3>
+      <section className="space-y-4">
+        <div className="relative overflow-hidden bg-gradient-to-r from-slate-900 via-indigo-900 to-sky-900 text-white p-6 rounded-2xl border border-indigo-300/20 shadow-lg">
+          <div className="absolute -top-16 -right-12 w-44 h-44 rounded-full bg-white/15 blur-2xl" />
+          <div className="absolute -bottom-20 -left-10 w-56 h-56 rounded-full bg-sky-300/20 blur-3xl" />
 
-        {!profile.badges || profile.badges.length === 0 ? (
-          <p className="text-gray-400 text-sm">No badges yet</p>
-        ) : (
-          <div className="flex flex-wrap gap-3">
-            {profile.badges.map((badge) => (
-              <div
-                key={badge._id}
-                className="w-12 h-12 rounded-xl bg-gray-100 flex items-center justify-center text-xl shadow"
-                title={badge.name}
-              >
-                {badge.icon || "🏅"}
+          <div className="relative z-10 flex flex-col md:flex-row md:items-center md:justify-between gap-5">
+            <div>
+              <p className="inline-flex items-center gap-2 text-[11px] uppercase tracking-[0.18em] font-extrabold text-sky-100">
+                <Sparkles size={14} />
+                Achievement Showcase
+              </p>
+              <h3 className="mt-2 text-2xl font-extrabold tracking-tight">Badges</h3>
+              <p className="text-sm text-indigo-100 mt-1">Your recognitions and accomplishments in UniConnect.</p>
+            </div>
+
+            <div className="flex items-center gap-3">
+              <div className="rounded-xl bg-white/10 border border-white/20 px-4 py-3 min-w-[130px]">
+                <p className="text-[10px] uppercase tracking-widest text-sky-100 font-bold">Total Earned</p>
+                <p className="text-2xl font-black">{badges.length}</p>
               </div>
-            ))}
+
+              <div className="w-14 h-14 rounded-2xl bg-amber-300/20 border border-amber-200/40 text-amber-200 flex items-center justify-center">
+                <Award size={26} />
+              </div>
+            </div>
           </div>
-        )}
+        </div>
+
+         
+ 
       </section>
     </div>
   );

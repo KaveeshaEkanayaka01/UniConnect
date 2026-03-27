@@ -44,20 +44,7 @@ const userSchema = new mongoose.Schema(
      type: [String],
      default: [],
     },
- 
-
-   isMentor: {
-     type: Boolean,
-     default: false,
-   },
-
-  availability: {
-    type: Boolean,
-    default: true,
-  },
-
-
-
+  
     isActive: {
       type: Boolean,
       default: true,
@@ -78,7 +65,7 @@ const userSchema = new mongoose.Schema(
       default: null,
     },
 
-    lastLogin: Date,
+     
   },
   { timestamps: true }
 );

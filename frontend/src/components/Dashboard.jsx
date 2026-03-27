@@ -25,7 +25,6 @@ const StatCard = ({ title, value, icon: Icon, color }) => (
 const DashboardPage = () => {
   const [user, setUser] = useState(null);
   const [profile , setProfile] = useState(null);
-  const [mentorNames, setMentorNames] = useState([]);
   const [joinedClubs, setJoinedClubs] = useState([]);
   const navigate = useNavigate();
   const displayFaculty = profile?.faculty || user?.faculty || "Not set";
@@ -34,10 +33,7 @@ const DashboardPage = () => {
   useEffect(() => {
     const fetchDashboardData = async () => {
       try {
-        const [dashboardRes, mentorsRes] = await Promise.all([
-          API.get("/student/dashboard"),
-          API.get("/student/match"),
-        ]);
+        const dashboardRes = await API.get("/student/dashboard");
 
         setUser(dashboardRes.data.user);
         setProfile(dashboardRes.data.profile);
@@ -45,12 +41,6 @@ const DashboardPage = () => {
           ? dashboardRes.data.profile.joinedClubs
           : [];
         setJoinedClubs(clubs);
-        const mentors = Array.isArray(mentorsRes.data) ? mentorsRes.data : [];
-        const names = mentors
-          .map((item) => item?.mentor?.fullName)
-          .filter(Boolean)
-          .slice(0, 5);
-        setMentorNames(names);
       } catch (err) {
         localStorage.clear();
         navigate("/login");
@@ -129,21 +119,6 @@ const DashboardPage = () => {
             <div className="text-sm text-slate-600">⚡ Added new skill</div>
             <div className="text-sm text-slate-600">🏆 Earned first badge</div>
           </div>
-        </div>
-
-        <div className="bg-white rounded-2xl border shadow-sm p-6">
-          <h3 className="text-lg font-bold text-slate-800 mb-4">Your Mentors</h3>
-          {mentorNames.length > 0 ? (
-            <div className="space-y-3">
-              {mentorNames.map((name) => (
-                <div key={name} className="text-sm text-slate-700 font-medium">
-                  {name}
-                </div>
-              ))}
-            </div>
-          ) : (
-            <p className="text-sm text-slate-500">No mentors found yet.</p>
-          )}
         </div>
 
         <div className="bg-white rounded-2xl border shadow-sm p-6">

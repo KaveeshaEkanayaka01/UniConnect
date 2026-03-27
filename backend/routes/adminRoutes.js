@@ -9,6 +9,7 @@ import {
   updateUserByAdmin,
 } from "../controllers/adminController.js";
 import { authorizeRoles, protect } from "../middleware/authMiddleware.js";
+import { uploadCertificateImage } from "../middleware/uploadMiddleware.js";
 
 const router = express.Router();
 
@@ -22,6 +23,6 @@ router.delete("/users/:userId", deleteUserByAdmin);
 
 router.get("/badges", getAllBadges);
 router.post("/badges", createBadge);
-router.post("/users/:userId/rewards", assignRewards);
+router.post("/users/:userId/rewards", uploadCertificateImage.single("certificateImage"), assignRewards);
 
 export default router;

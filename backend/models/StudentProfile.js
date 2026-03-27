@@ -85,6 +85,21 @@ const certificateSchema = new mongoose.Schema(
       default: "UniConnect",
       trim: true,
     },
+    credentialId: {
+      type: String,
+      default: "",
+      trim: true,
+    },
+    verificationUrl: {
+      type: String,
+      default: "",
+      trim: true,
+    },
+    certificateUrl: {
+      type: String,
+      default: "",
+      trim: true,
+    },
     issuedAt: {
       type: Date,
       default: Date.now,

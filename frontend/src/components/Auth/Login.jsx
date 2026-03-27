@@ -1,18 +1,58 @@
-import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import React, { useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import API from "../Auth/axios";
+
+const validateLoginForm = ({ email, password }) => {
+  const errors = {};
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+  if (!email.trim()) {
+    errors.email = "Email is required";
+  } else if (!emailRegex.test(email)) {
+    errors.email = "Enter a valid email address";
+  }
+
+  if (!password) {
+    errors.password = "Password is required";
+  } else if (password.length < 6) {
+    errors.password = "Password must be at least 6 characters";
+  }
+
+  return errors;
+};
 
 const LoginPage = () => {
   const navigate = useNavigate();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const [errors, setErrors] = useState({});
+  const [submitError, setSubmitError] = useState("");
+
+  const handleEmailChange = (e) => {
+    setEmail(e.target.value);
+    setErrors((prev) => ({ ...prev, email: "" }));
+    setSubmitError("");
+  };
+
+  const handlePasswordChange = (e) => {
+    setPassword(e.target.value);
+    setErrors((prev) => ({ ...prev, password: "" }));
+    setSubmitError("");
+  };
 
   const handleLogin = async (e) => {
     e.preventDefault();
 
+    const validationErrors = validateLoginForm({ email, password });
+    if (Object.keys(validationErrors).length > 0) {
+      setErrors(validationErrors);
+      return;
+    }
+
     try {
       setLoading(true);
+      setSubmitError("");
       const res = await API.post("/auth/login", { email, password });
       localStorage.setItem("token", res.data.token);
       localStorage.setItem("user", JSON.stringify(res.data.user));
@@ -21,7 +61,7 @@ const LoginPage = () => {
       const isAdmin = role === "SYSTEM_ADMIN" || role === "CLUB_ADMIN";
       navigate(isAdmin ? "/admin" : "/dashboard");
     } catch (err) {
-      alert(err.response?.data?.message || "Login failed");
+      setSubmitError(err.response?.data?.message || "Login failed");
     } finally {
       setLoading(false);
     }
@@ -31,9 +71,9 @@ const LoginPage = () => {
     <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4">
       <div className="w-full max-w-md">
         <div className="flex justify-center mb-4">
-          <div className="w-12 h-12 bg-indigo-600 rounded-xl flex items-center justify-center text-white text-2xl font-bold shadow-lg">
-            U
-          </div>
+           <div>
+              <img src="../../images/uniconnect.png" alt="UniConnect Logo" className="h-20 w-26 rounded-full" />
+            </div>
         </div>
 
         <h2 className="text-center text-2xl font-bold text-gray-900">
@@ -47,28 +87,35 @@ const LoginPage = () => {
         </p>
 
         <div className="mt-6 bg-white p-6 rounded-xl shadow-lg border border-gray-100">
-          <form className="space-y-4" onSubmit={handleLogin}>
+          <form className="space-y-4" onSubmit={handleLogin} noValidate>
+            {submitError && (
+              <div className="rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+                {submitError}
+              </div>
+            )}
 
             <div>
               <label className="text-xs text-gray-600">Email address</label>
               <input
                 type="email"
-                required
                 value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="mt-1 block w-full rounded-lg border px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500"
+                onChange={handleEmailChange}
+                className={`mt-1 block w-full rounded-lg border px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 ${errors.email ? "border-red-500" : ""}`}
+                aria-invalid={Boolean(errors.email)}
               />
+              {errors.email && <p className="mt-1 text-xs text-red-600">{errors.email}</p>}
             </div>
 
             <div>
               <label className="text-xs text-gray-600">Password</label>
               <input
                 type="password"
-                required
                 value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="mt-1 block w-full rounded-lg border px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500"
+                onChange={handlePasswordChange}
+                className={`mt-1 block w-full rounded-lg border px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 ${errors.password ? "border-red-500" : ""}`}
+                aria-invalid={Boolean(errors.password)}
               />
+              {errors.password && <p className="mt-1 text-xs text-red-600">{errors.password}</p>}
             </div>
 
             <div className="flex items-center justify-between text-sm">
@@ -88,7 +135,6 @@ const LoginPage = () => {
             >
               {loading ? "Signing in..." : "Sign In"}
             </button>
-
           </form>
         </div>
       </div>
