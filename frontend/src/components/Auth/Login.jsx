@@ -59,7 +59,8 @@ const LoginPage = () => {
 
       const role = String(res.data?.user?.role || "").trim().toUpperCase();
       const isAdmin = role === "SYSTEM_ADMIN" || role === "CLUB_ADMIN";
-      navigate(isAdmin ? "/admin" : "/dashboard");
+      navigate(isAdmin ? "/admin" : "/Home");
+
     } catch (err) {
       setSubmitError(err.response?.data?.message || "Login failed");
     } finally {
@@ -87,6 +88,7 @@ const LoginPage = () => {
         </p>
 
         <div className="mt-6 bg-white p-6 rounded-xl shadow-lg border border-gray-100">
+
           <form className="space-y-4" onSubmit={handleLogin} noValidate>
             {submitError && (
               <div className="rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700">

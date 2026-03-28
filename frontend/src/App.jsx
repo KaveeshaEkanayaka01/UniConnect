@@ -16,7 +16,10 @@ import ForgotPasswordPage from "./components/ForgotPasswordPage";
 import AdminPanel from "./components/AdminPanel";
 import BadgeCertificationPage from "./components/BadgeCertificationPage";
 import AccountSettingsPage from "./components/AccountSettingpage";
- 
+import HomePage from "./components/Home/HomePage";
+
+
+
 function App() {
   return (
     <BrowserRouter>
@@ -24,6 +27,7 @@ function App() {
         <Route path="/" element={<LandingPage />} />
         <Route path="/register" element={<Register />} />
         <Route path="/login" element={<Login />} />
+        <Route path="/Home" element={<HomePage/>}/>
         <Route path="/forgot-password" element={<ForgotPasswordPage />} />
         <Route path="/reset-password/:token" element={<ResetPasswordPage />} />
 
@@ -51,6 +55,7 @@ function App() {
           <Route path="/skills/add" element={<AddSkillPage />} />
           <Route path="/settings" element={<AccountSettingsPage />} />
           <Route path="/settings/password" element={<ChangePasswordPage />} />
+          
           
         </Route>
       </Routes>
