@@ -61,9 +61,9 @@ const AdminPanel = () => {
     badgeId: "",
     certificateTitle: "",
     issuer: "UniConnect",
-    credentialId: "",
     verificationUrl: "",
   });
+
   const [certificateImageFile, setCertificateImageFile] = useState(null);
 
   const [badgeForm, setBadgeForm] = useState({
@@ -196,7 +196,6 @@ const AdminPanel = () => {
       badgeId: "",
       certificateTitle: "",
       issuer: "UniConnect",
-      credentialId: "",
       verificationUrl: "",
     });
     setCertificateImageFile(null);
@@ -295,7 +294,6 @@ const AdminPanel = () => {
         ...prev,
         badgeId: "",
         certificateTitle: "",
-        credentialId: "",
         verificationUrl: "",
       }));
       setCertificateImageFile(null);
@@ -335,6 +333,8 @@ const AdminPanel = () => {
       setMessage(error?.response?.data?.message || "Failed to create badge");
     }
   };
+
+
 
   return (
     <div className="mx-auto w-full max-w-7xl space-y-8">
@@ -619,12 +619,9 @@ const AdminPanel = () => {
                 className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm"
               />
 
-              <input
-                value={rewardForm.credentialId}
-                onChange={(e) => setRewardForm((prev) => ({ ...prev, credentialId: e.target.value }))}
-                placeholder="Credential ID (optional)"
-                className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm"
-              />
+              <p className="text-xs text-slate-500 bg-slate-50 border border-slate-200 rounded-lg px-3 py-2">
+                Credential ID is generated automatically when the certificate is issued.
+              </p>
 
               <input
                 value={rewardForm.verificationUrl}
@@ -656,6 +653,8 @@ const AdminPanel = () => {
                   Cancel
                 </button>
               </div>
+
+
             </form>
           </div>
         </div>

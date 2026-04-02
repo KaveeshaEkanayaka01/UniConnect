@@ -3,6 +3,29 @@ import User from "../models/User.js";
 import StudentProfile from "../models/StudentProfile.js";
 import Badge from "../models/Badge.js";
 import sendEmail from "../utils/sendEmail.js";
+import {
+  buildCertificatePayload,
+  generateCredentialId,
+  signCertificatePayload,
+} from "../utils/certificateCredential.js";
+
+const CREDENTIAL_SIGNING_SECRET =
+  process.env.CREDENTIAL_SIGNING_SECRET || process.env.JWT_SECRET;
+
+const generateUniqueCredentialId = async (maxAttempts = 5) => {
+  for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
+    const candidate = generateCredentialId();
+    const duplicateCredential = await StudentProfile.findOne({
+      "certificates.credentialId": candidate,
+    }).select("_id");
+
+    if (!duplicateCredential) {
+      return candidate;
+    }
+  }
+
+  throw new Error("Failed to generate a unique credential ID");
+};
 
 const toYearNumber = (value) => {
   const parsed = Number(value);
@@ -228,7 +251,13 @@ export const createBadge = async (req, res) => {
 export const assignRewards = async (req, res) => {
   try {
     const { userId } = req.params;
-    const { badgeId, certificateTitle, issuer, credentialId, verificationUrl } = req.body;
+    const { badgeId, certificateTitle, issuer, verificationUrl } = req.body;
+
+    if (!CREDENTIAL_SIGNING_SECRET) {
+      return res.status(500).json({
+        message: "Credential signing secret is missing in environment configuration",
+      });
+    }
 
     const user = await User.findById(userId).select("fullName email");
     if (!user) {
@@ -264,19 +293,35 @@ export const assignRewards = async (req, res) => {
     }
 
     if (certificateTitle && certificateTitle.trim()) {
+      const resolvedCredentialId = await generateUniqueCredentialId();
+      const backendBaseUrl = process.env.BACKEND_PUBLIC_URL || `${req.protocol}://${req.get("host")}`;
+
       const certificateData = {
         title: certificateTitle.trim(),
         issuer: issuer?.trim() || "UniConnect",
-        credentialId: credentialId?.trim() || "",
-        verificationUrl: verificationUrl?.trim() || "",
+        credentialId: resolvedCredentialId,
+        verificationUrl:
+          verificationUrl?.trim() || `${backendBaseUrl}/api/credentials/verify/${resolvedCredentialId}`,
         certificateUrl: "",
         issuedAt: new Date(),
+        issuedBy: req.user?._id,
+        status: "ACTIVE",
+        signature: "",
       };
 
       // If a certificate image was uploaded, set the URL
       if (req.file) {
         certificateData.certificateUrl = `/uploads/certificates/${req.file.filename}`;
       }
+
+      const signaturePayload = buildCertificatePayload({
+        ...certificateData,
+        userId,
+      });
+      certificateData.signature = signCertificatePayload(
+        signaturePayload,
+        CREDENTIAL_SIGNING_SECRET
+      );
 
       profile.certificates.push(certificateData);
 
@@ -328,3 +373,5 @@ export const assignRewards = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
+
+

@@ -25,4 +25,5 @@ router.get("/badges", getAllBadges);
 router.post("/badges", createBadge);
 router.post("/users/:userId/rewards", uploadCertificateImage.single("certificateImage"), assignRewards);
 
+
 export default router;

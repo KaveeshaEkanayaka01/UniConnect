@@ -1,15 +1,19 @@
 import React, { useEffect, useMemo, useState } from "react";
 import API from "./Auth/axios";
-import { Award, BadgeCheck, Calendar, ExternalLink, FileBadge2, Trash2, X } from "lucide-react";
+import { Award, BadgeCheck, Calendar, FileBadge2, FileText, Loader2, ShieldCheck, Sparkles, X } from "lucide-react";
+
+const VERIFICATION_CACHE_KEY_PREFIX = "uniconnect-cert-verification:";
 
 const BadgeCertificationPage = () => {
   const [badges, setBadges] = useState([]);
+  const [userId, setUserId] = useState("");
   const [certificates, setCertificates] = useState([]);
   const [selectedCertificate, setSelectedCertificate] = useState(null);
-  const [deletingCertificateId, setDeletingCertificateId] = useState(null);
+  const [deletingCertificateId, setDeletingCertificateId] = useState("");
+  const [verificationByCredential, setVerificationByCredential] = useState({});
+  const [verifyingCredentialId, setVerifyingCredentialId] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [actionError, setActionError] = useState("");
 
   useEffect(() => {
     const loadShowcase = async () => {
@@ -19,9 +23,40 @@ const BadgeCertificationPage = () => {
 
         const { data } = await API.get("/student/dashboard");
         const profile = data?.profile || {};
+        const resolvedUserId = String(data?.user?._id || "").trim();
+        const resolvedCertificates = Array.isArray(profile.certificates)
+          ? profile.certificates
+          : [];
+        const knownIds = new Set(
+          resolvedCertificates
+            .map((item) => String(item?.credentialId || "").trim())
+            .filter(Boolean)
+        );
+
+        setUserId(resolvedUserId);
+
+        // Restore previously verified/unverified state for this user only.
+        if (resolvedUserId) {
+          const cacheKey = `${VERIFICATION_CACHE_KEY_PREFIX}${resolvedUserId}`;
+          try {
+            const rawCache = localStorage.getItem(cacheKey);
+            const parsedCache = rawCache ? JSON.parse(rawCache) : {};
+            const sanitized = Object.entries(parsedCache).reduce((acc, [key, value]) => {
+              if (knownIds.has(key)) {
+                acc[key] = value;
+              }
+              return acc;
+            }, {});
+            setVerificationByCredential(sanitized);
+          } catch {
+            setVerificationByCredential({});
+          }
+        } else {
+          setVerificationByCredential({});
+        }
 
         setBadges(Array.isArray(profile.badges) ? profile.badges : []);
-        setCertificates(Array.isArray(profile.certificates) ? profile.certificates : []);
+        setCertificates(resolvedCertificates);
       } catch (err) {
         setError(err?.response?.data?.message || "Failed to load badges and certificates");
       } finally {
@@ -31,6 +66,17 @@ const BadgeCertificationPage = () => {
 
     loadShowcase();
   }, []);
+
+  useEffect(() => {
+    if (!userId) return;
+
+    const cacheKey = `${VERIFICATION_CACHE_KEY_PREFIX}${userId}`;
+    try {
+      localStorage.setItem(cacheKey, JSON.stringify(verificationByCredential));
+    } catch {
+      // Ignore storage quota errors; page still functions.
+    }
+  }, [userId, verificationByCredential]);
 
   const totalItems = useMemo(() => badges.length + certificates.length, [badges, certificates]);
 
@@ -45,52 +91,170 @@ const BadgeCertificationPage = () => {
     return `${host}${url.startsWith("/") ? "" : "/"}${url}`;
   };
 
-  const handleDeleteCertificate = async (certificateId) => {
-    if (!certificateId) return;
+  const getVerificationMeta = (certificate) => {
+    const credentialId = certificate?.credentialId;
+    const result = credentialId ? verificationByCredential[credentialId] : null;
+
+    if (result?.verified === true) {
+      return {
+        label: "Verified",
+        className: "bg-emerald-100 text-emerald-700 border border-emerald-200",
+      };
+    }
+
+    if (result?.verified === false) {
+      return {
+        label: "Not Verified",
+        className: "bg-rose-100 text-rose-700 border border-rose-200",
+      };
+    }
+
+    return {
+      label: "Unverified",
+      className: "bg-slate-100 text-slate-600 border border-slate-200",
+    };
+  };
+
+  const certificateStatusSummary = useMemo(() => {
+    return certificates.reduce(
+      (acc, certificate) => {
+        const credentialId = certificate?.credentialId;
+        const result = credentialId ? verificationByCredential[credentialId] : null;
+
+        if (result?.verified === true) {
+          acc.verified += 1;
+        } else if (result?.verified === false) {
+          acc.notVerified += 1;
+        } else {
+          acc.unverified += 1;
+        }
+
+        return acc;
+      },
+      { verified: 0, notVerified: 0, unverified: 0 }
+    );
+  }, [certificates, verificationByCredential]);
+
+  const handleVerifyCertificate = async (certificate) => {
+    const credentialId = String(certificate?.credentialId || "").trim();
+    if (!credentialId) {
+      return;
+    }
 
     try {
-      setActionError("");
-      setDeletingCertificateId(certificateId);
-      await API.delete(`/student/certificates/${certificateId}`);
+      setVerifyingCredentialId(credentialId);
+      const { data } = await API.get(`/credentials/verify/${encodeURIComponent(credentialId)}`);
+      const verified = Boolean(data?.valid) && data?.status === "VALID";
 
-      setCertificates((prev) => prev.filter((certificate) => certificate._id !== certificateId));
-      setSelectedCertificate((prev) => (prev?._id === certificateId ? null : prev));
-    } catch (err) {
-      setActionError(err?.response?.data?.message || "Failed to delete certificate");
+      setVerificationByCredential((prev) => ({
+        ...prev,
+        [credentialId]: {
+          verified,
+          status: data?.status || "UNKNOWN",
+          checkedAt: new Date().toISOString(),
+          message: verified
+            ? "Certificate is valid and active"
+            : "Certificate verification failed",
+        },
+      }));
+    } catch (verifyError) {
+      setVerificationByCredential((prev) => ({
+        ...prev,
+        [credentialId]: {
+          verified: false,
+          status: "ERROR",
+          checkedAt: new Date().toISOString(),
+          message: verifyError?.response?.data?.message || "Unable to verify certificate",
+        },
+      }));
     } finally {
-      setDeletingCertificateId(null);
+      setVerifyingCredentialId("");
+    }
+  };
+
+  const handleDeleteCertificate = async (certificate) => {
+    const certificateDocId = String(certificate?._id || "").trim();
+    if (!certificateDocId) {
+      return;
+    }
+
+    const ok = window.confirm("Delete this certificate from your profile?");
+    if (!ok) return;
+
+    try {
+      setDeletingCertificateId(certificateDocId);
+      await API.delete(`/student/certificates/${encodeURIComponent(certificateDocId)}`);
+
+      setCertificates((prev) =>
+        prev.filter((item) => String(item?._id) !== certificateDocId)
+      );
+
+      const credentialId = String(certificate?.credentialId || "").trim();
+      if (credentialId) {
+        setVerificationByCredential((prev) => {
+          const updated = { ...prev };
+          delete updated[credentialId];
+          return updated;
+        });
+      }
+
+      setSelectedCertificate(null);
+    } catch (deleteError) {
+      window.alert(
+        deleteError?.response?.data?.message || "Failed to delete certificate"
+      );
+    } finally {
+      setDeletingCertificateId("");
     }
   };
 
   return (
     <div className="space-y-8">
-      <div className="relative overflow-hidden bg-white rounded-3xl border border-slate-200 p-7 shadow-sm">
-         
-        <p className="text-xs font-black uppercase tracking-[0.2em] text-indigo-500">Showcase</p>
-        <h1 className="mt-2 text-3xl font-black text-slate-900">My Badges & Certificates</h1>
-        <p className="mt-2 text-sm text-slate-500 max-w-2xl">
-          View your achievements, recognitions, and credentials earned through UniConnect.
-        </p>
+      <div className="relative overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
+        <div className="absolute -top-20 -right-16 h-56 w-56 rounded-full bg-gradient-to-br from-indigo-200/40 to-cyan-100/20 blur-2xl" />
+        <div className="absolute -bottom-20 -left-10 h-48 w-48 rounded-full bg-gradient-to-br from-emerald-200/30 to-amber-100/20 blur-2xl" />
 
-        <div className="mt-5 grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <div className="rounded-2xl border border-slate-200 p-4 bg-slate-50">
-            <p className="text-xs text-slate-500">Total Showcase Items</p>
-            <p className="text-2xl font-black text-slate-900 mt-1">{totalItems}</p>
+        <div className="relative p-7">
+          <div className="inline-flex items-center gap-2 rounded-full border border-indigo-100 bg-indigo-50 px-3 py-1">
+            <Sparkles size={13} className="text-indigo-600" />
+            <p className="text-[11px] font-black uppercase tracking-[0.18em] text-indigo-600">Showcase</p>
           </div>
-          <div className="rounded-2xl border border-slate-200 p-4 bg-slate-50">
-            <p className="text-xs text-slate-500">Badges</p>
-            <p className="text-2xl font-black text-slate-900 mt-1">{badges.length}</p>
-          </div>
-          <div className="rounded-2xl border border-slate-200 p-4 bg-slate-50">
-            <p className="text-xs text-slate-500">Certificates</p>
-            <p className="text-2xl font-black text-slate-900 mt-1">{certificates.length}</p>
+
+          <h1 className="mt-3 text-3xl font-black text-slate-900">My Badges & Certificates</h1>
+          <p className="mt-2 text-sm text-slate-500 max-w-2xl">
+            Certificates are presented like traditionally framed wall diplomas to keep a clean, professional showcase.
+          </p>
+
+          <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+            <div className="rounded-2xl border border-slate-200 p-4 bg-gradient-to-br from-white to-slate-50">
+              <p className="text-xs text-slate-500">Total Items</p>
+              <p className="text-2xl font-black text-slate-900 mt-1">{totalItems}</p>
+            </div>
+            <div className="rounded-2xl border border-slate-200 p-4 bg-gradient-to-br from-white to-indigo-50/40">
+              <p className="text-xs text-slate-500">Badges</p>
+              <p className="text-2xl font-black text-slate-900 mt-1">{badges.length}</p>
+            </div>
+            <div className="rounded-2xl border border-emerald-200 p-4 bg-gradient-to-br from-white to-emerald-50/60">
+              <p className="text-xs text-emerald-700">Verified Certificates</p>
+              <p className="text-2xl font-black text-emerald-700 mt-1">{certificateStatusSummary.verified}</p>
+            </div>
+            <div className="rounded-2xl border border-slate-200 p-4 bg-gradient-to-br from-white to-slate-50">
+              <p className="text-xs text-slate-500">Need Verification</p>
+              <p className="text-2xl font-black text-slate-900 mt-1">{certificateStatusSummary.unverified}</p>
+            </div>
           </div>
         </div>
       </div>
 
       {loading && (
-        <div className="bg-white rounded-2xl border border-slate-200 p-6 text-slate-500">
-          Loading your showcase...
+        <div className="bg-white rounded-2xl border border-slate-200 p-6">
+          <div className="animate-pulse space-y-4">
+            <div className="h-4 w-48 rounded bg-slate-200" />
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="h-28 rounded-2xl bg-slate-100" />
+              <div className="h-28 rounded-2xl bg-slate-100" />
+            </div>
+          </div>
         </div>
       )}
 
@@ -102,23 +266,25 @@ const BadgeCertificationPage = () => {
 
       {!loading && !error && (
         <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-          <section className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm">
+          <section className="bg-white rounded-3xl border border-slate-200 p-6 shadow-sm">
             <div className="flex items-center gap-2 mb-4">
               <BadgeCheck size={18} className="text-indigo-600" />
               <h2 className="text-xl font-black text-slate-900">Badges</h2>
             </div>
 
             {badges.length === 0 ? (
-              <p className="text-sm text-slate-500">No badges assigned yet.</p>
+              <div className="rounded-2xl border border-dashed border-slate-200 p-8 text-center">
+                <p className="text-sm font-semibold text-slate-500">No badges assigned yet.</p>
+              </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {badges.map((badge) => (
                   <div
                     key={badge._id}
-                    className="rounded-2xl border border-indigo-100 p-4 bg-gradient-to-br from-indigo-50 via-white to-amber-50"
+                    className="group rounded-2xl border border-indigo-100 p-4 bg-gradient-to-br from-indigo-50 via-white to-amber-50 transition hover:shadow-md"
                   >
                     <div className="flex items-start gap-3">
-                      <div className="relative w-12 h-12 rounded-full bg-amber-100 text-amber-700 flex items-center justify-center shadow-inner">
+                      <div className="relative w-12 h-12 rounded-full bg-amber-100 text-amber-700 flex items-center justify-center shadow-inner transition group-hover:scale-105">
                         <Award size={18} />
                         <span className="absolute inset-0 rounded-full border-2 border-amber-200" />
                       </div>
@@ -136,23 +302,22 @@ const BadgeCertificationPage = () => {
             )}
           </section>
 
-          <section className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm">
+          <section className="bg-white rounded-3xl border border-slate-200 p-6 shadow-sm">
             <div className="flex items-center gap-2 mb-4">
               <FileBadge2 size={18} className="text-emerald-600" />
               <h2 className="text-xl font-black text-slate-900">Certificates</h2>
             </div>
 
-            {actionError && (
-              <div className="mb-4 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-semibold text-rose-700">
-                {actionError}
-              </div>
-            )}
-
             {certificates.length === 0 ? (
-              <p className="text-sm text-slate-500">No certificates assigned yet.</p>
+              <div className="rounded-2xl border border-dashed border-slate-200 p-8 text-center">
+                <p className="text-sm font-semibold text-slate-500">No certificates assigned yet.</p>
+              </div>
             ) : (
               <div className="space-y-3">
-                {certificates.map((certificate) => (
+                {certificates.map((certificate) => {
+                  const verificationMeta = getVerificationMeta(certificate);
+
+                  return (
                   <div
                     key={certificate._id}
                     className="rounded-2xl border border-emerald-100 p-4 bg-gradient-to-br from-white via-emerald-50/50 to-teal-50/50 cursor-pointer hover:shadow-md transition"
@@ -160,8 +325,9 @@ const BadgeCertificationPage = () => {
                   >
                     <div className="flex items-start gap-4 justify-between">
                       <div className="flex items-start gap-4 min-w-0">
-                      <div className="w-20 shrink-0 rounded-lg border-2 border-emerald-200 bg-white p-2 shadow-sm">
-                        <div className="h-11 rounded border border-dashed border-emerald-300 flex items-center justify-center text-emerald-600">
+                      <div className="w-20 shrink-0 rounded-md border border-amber-700/70 bg-gradient-to-br from-amber-200 via-amber-300 to-amber-600 p-1.5 shadow-[0_8px_18px_rgba(71,48,17,0.28)]">
+                        <div className="rounded-sm bg-[#f4efe4] p-1.5 border border-amber-100/70">
+                          <div className="h-9 rounded-[2px] border border-emerald-200 bg-white flex items-center justify-center text-emerald-600 overflow-hidden">
                           {resolveCertificateUrl(certificate.certificateUrl) ? (
                             <img
                               src={resolveCertificateUrl(certificate.certificateUrl)}
@@ -171,14 +337,17 @@ const BadgeCertificationPage = () => {
                           ) : (
                             <FileText size={24} />
                           )}
+                          </div>
                         </div>
-                        <div className="mt-1.5 h-1 rounded bg-emerald-100" />
-                        <div className="mt-1 h-1 rounded bg-emerald-100 w-4/5" />
                       </div>
 
                       <div className="min-w-0">
                         <h3 className="font-black text-slate-900 truncate">{certificate.title}</h3>
                         <p className="text-sm text-slate-600 mt-1">Issued by: {certificate.issuer || "UniConnect"}</p>
+                        <p className="text-xs text-slate-500 mt-1">Credential ID: {certificate.credentialId || "-"}</p>
+                        <p className={`inline-flex mt-2 px-2.5 py-1 rounded-full text-xs font-bold ${verificationMeta.className}`}>
+                          {verificationMeta.label}
+                        </p>
                         <p className="text-xs text-slate-500 mt-2 flex items-center gap-1">
                           <Calendar size={12} />
                           Issued: {certificate.issuedAt ? new Date(certificate.issuedAt).toLocaleDateString() : "-"}
@@ -186,22 +355,13 @@ const BadgeCertificationPage = () => {
                       </div>
                       </div>
 
-                      <button
-                        type="button"
-                        onClick={(event) => {
-                          event.stopPropagation();
-                          handleDeleteCertificate(certificate._id);
-                        }}
-                        disabled={deletingCertificateId === certificate._id}
-                        className="h-7 w-7 rounded-md border border-rose-200 text-rose-600 hover:bg-rose-50 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
-                        title="Delete certificate"
-                        aria-label="Delete certificate"
-                      >
-                        <Trash2 size={14} />
-                      </button>
+                      <div className="hidden sm:flex shrink-0 items-center text-slate-400">
+                        <ShieldCheck size={16} />
+                      </div>
                     </div>
                   </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </section>
@@ -214,10 +374,10 @@ const BadgeCertificationPage = () => {
           onClick={() => setSelectedCertificate(null)}
         >
           <div
-            className="w-full max-w-3xl rounded-2xl border border-slate-200 bg-white shadow-xl"
+            className="w-full max-w-3xl rounded-3xl border border-slate-200 bg-white shadow-xl"
             onClick={(event) => event.stopPropagation()}
           >
-            <div className="flex items-center justify-between border-b border-slate-200 px-5 py-4">
+            <div className="flex items-center justify-between border-b border-slate-200 px-6 py-4">
               <h3 className="text-lg font-black text-slate-900">Certificate Details</h3>
               <button
                 type="button"
@@ -229,8 +389,62 @@ const BadgeCertificationPage = () => {
               </button>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-5 p-5">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5 p-6">
               <div>
+                {(() => {
+                  const verificationMeta = getVerificationMeta(selectedCertificate);
+                  const credentialId = selectedCertificate.credentialId;
+                  const verifyState = credentialId ? verificationByCredential[credentialId] : null;
+                  const isVerifying = verifyingCredentialId === credentialId;
+                  const isDeleting = deletingCertificateId === String(selectedCertificate?._id || "");
+
+                  return (
+                    <>
+                      <div className="mb-4">
+                        <p className="text-xs uppercase tracking-wide font-bold text-slate-500">Verification</p>
+                        <div className="mt-2 flex items-center gap-2">
+                          <p className={`inline-flex px-3 py-1 rounded-full text-xs font-bold ${verificationMeta.className}`}>
+                            {verificationMeta.label}
+                          </p>
+                          <button
+                            type="button"
+                            onClick={() => handleVerifyCertificate(selectedCertificate)}
+                            disabled={isVerifying || isDeleting || !credentialId}
+                            className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-indigo-600 text-white text-xs font-semibold hover:bg-indigo-700 disabled:opacity-60 disabled:cursor-not-allowed"
+                          >
+                            {isVerifying ? (
+                              <>
+                                <Loader2 size={12} className="animate-spin" /> Verifying...
+                              </>
+                            ) : (
+                              "Verify Now"
+                            )}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteCertificate(selectedCertificate)}
+                            disabled={isDeleting || isVerifying}
+                            className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-rose-600 text-white text-xs font-semibold hover:bg-rose-700 disabled:opacity-60 disabled:cursor-not-allowed"
+                          >
+                            {isDeleting ? (
+                              <>
+                                <Loader2 size={12} className="animate-spin" /> Deleting...
+                              </>
+                            ) : (
+                              "Delete"
+                            )}
+                          </button>
+                        </div>
+                        {verifyState?.message && (
+                          <p className={`text-xs mt-2 ${verifyState.verified ? "text-emerald-700" : "text-rose-700"}`}>
+                            {verifyState.message}
+                          </p>
+                        )}
+                      </div>
+                    </>
+                  );
+                })()}
+
                 <p className="text-xs uppercase tracking-wide font-bold text-slate-500">Title</p>
                 <p className="text-sm font-semibold text-slate-900 mt-1">{selectedCertificate.title || "-"}</p>
 
@@ -248,31 +462,28 @@ const BadgeCertificationPage = () => {
                 <p className="text-sm font-semibold text-slate-900 mt-1 break-all">
                   {selectedCertificate.credentialId || "-"}
                 </p>
-
-                {selectedCertificate.verificationUrl && (
-                  <a
-                    href={selectedCertificate.verificationUrl}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="mt-4 inline-flex items-center gap-1 text-sm font-semibold text-emerald-700 hover:text-emerald-800"
-                  >
-                    Verify Certificate <ExternalLink size={14} />
-                  </a>
-                )}
               </div>
 
-              <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
-                {resolveCertificateUrl(selectedCertificate.certificateUrl) ? (
-                  <img
-                    src={resolveCertificateUrl(selectedCertificate.certificateUrl)}
-                    alt={selectedCertificate.title || "Certificate"}
-                    className="w-full h-64 object-contain rounded-lg bg-white"
-                  />
-                ) : (
-                  <div className="h-64 rounded-lg border border-dashed border-slate-300 bg-white flex items-center justify-center text-slate-500 text-sm font-semibold">
-                    Certificate image not available
+              <div className="rounded-xl border border-slate-200 bg-gradient-to-br from-stone-100 to-stone-200 p-6">
+                <div className="mx-auto w-full max-w-sm">
+                  <div className="mx-auto h-2 w-2 rounded-full bg-slate-500 shadow" />
+                  <div className="mx-auto h-5 w-0.5 bg-slate-400" />
+                  <div className="rounded-md border border-amber-700/80 bg-gradient-to-br from-amber-200 via-amber-300 to-amber-700 p-3 shadow-[0_12px_24px_rgba(71,48,17,0.35)]">
+                    <div className="rounded-sm border border-amber-100/70 bg-[#f4efe4] p-3">
+                      {resolveCertificateUrl(selectedCertificate.certificateUrl) ? (
+                        <img
+                          src={resolveCertificateUrl(selectedCertificate.certificateUrl)}
+                          alt={selectedCertificate.title || "Certificate"}
+                          className="w-full h-64 object-contain rounded-sm bg-white border border-emerald-100"
+                        />
+                      ) : (
+                        <div className="h-64 flex items-center justify-center bg-white rounded-sm border border-emerald-100 text-slate-400">
+                          <FileText size={48} />
+                        </div>
+                      )}
+                    </div>
                   </div>
-                )}
+                </div>
               </div>
             </div>
           </div>

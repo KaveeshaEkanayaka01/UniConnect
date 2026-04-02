@@ -104,6 +104,21 @@ const certificateSchema = new mongoose.Schema(
       type: Date,
       default: Date.now,
     },
+    issuedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      required: false,
+    },
+    status: {
+      type: String,
+      enum: ["ACTIVE"],
+      default: "ACTIVE",
+    },
+    signature: {
+      type: String,
+      default: "",
+      trim: true,
+    },
   },
   { _id: true }
 );
