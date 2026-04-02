@@ -3,6 +3,34 @@ import API from "./Auth/axios";
 import { Award, BadgeCheck, Calendar, FileBadge2, FileText, Loader2, ShieldCheck, Sparkles, X } from "lucide-react";
 
 const VERIFICATION_CACHE_KEY_PREFIX = "uniconnect-cert-verification:";
+const GLOBAL_VERIFICATION_CACHE_KEY = "uniconnect-cert-verification:global";
+
+const buildKnownCredentialSet = (certificates) =>
+  new Set(
+    (Array.isArray(certificates) ? certificates : [])
+      .map((item) => String(item?.credentialId || "").trim())
+      .filter(Boolean)
+  );
+
+const loadMergedVerificationCache = ({ resolvedUserId, knownIds }) => {
+  const rawGlobalCache = localStorage.getItem(GLOBAL_VERIFICATION_CACHE_KEY);
+  const globalCache = rawGlobalCache ? JSON.parse(rawGlobalCache) : {};
+
+  let userCache = {};
+  if (resolvedUserId) {
+    const cacheKey = `${VERIFICATION_CACHE_KEY_PREFIX}${resolvedUserId}`;
+    const rawUserCache = localStorage.getItem(cacheKey);
+    userCache = rawUserCache ? JSON.parse(rawUserCache) : {};
+  }
+
+  const mergedCache = { ...globalCache, ...userCache };
+  return Object.entries(mergedCache).reduce((acc, [key, value]) => {
+    if (knownIds.has(key)) {
+      acc[key] = value;
+    }
+    return acc;
+  }, {});
+};
 
 const BadgeCertificationPage = () => {
   const [badges, setBadges] = useState([]);
@@ -27,31 +55,18 @@ const BadgeCertificationPage = () => {
         const resolvedCertificates = Array.isArray(profile.certificates)
           ? profile.certificates
           : [];
-        const knownIds = new Set(
-          resolvedCertificates
-            .map((item) => String(item?.credentialId || "").trim())
-            .filter(Boolean)
-        );
+        const knownIds = buildKnownCredentialSet(resolvedCertificates);
 
         setUserId(resolvedUserId);
 
-        // Restore previously verified/unverified state for this user only.
-        if (resolvedUserId) {
-          const cacheKey = `${VERIFICATION_CACHE_KEY_PREFIX}${resolvedUserId}`;
-          try {
-            const rawCache = localStorage.getItem(cacheKey);
-            const parsedCache = rawCache ? JSON.parse(rawCache) : {};
-            const sanitized = Object.entries(parsedCache).reduce((acc, [key, value]) => {
-              if (knownIds.has(key)) {
-                acc[key] = value;
-              }
-              return acc;
-            }, {});
-            setVerificationByCredential(sanitized);
-          } catch {
-            setVerificationByCredential({});
-          }
-        } else {
+        // Restore global + user-specific verification state and keep only known credential IDs.
+        try {
+          const sanitized = loadMergedVerificationCache({
+            resolvedUserId,
+            knownIds,
+          });
+          setVerificationByCredential(sanitized);
+        } catch {
           setVerificationByCredential({});
         }
 
@@ -78,6 +93,56 @@ const BadgeCertificationPage = () => {
     }
   }, [userId, verificationByCredential]);
 
+  useEffect(() => {
+    if (!userId) return;
+
+    const knownIds = buildKnownCredentialSet(certificates);
+    if (knownIds.size === 0) return;
+
+    const syncFromStorage = () => {
+      try {
+        const sanitized = loadMergedVerificationCache({
+          resolvedUserId: userId,
+          knownIds,
+        });
+        setVerificationByCredential((prev) => {
+          const prevString = JSON.stringify(prev);
+          const nextString = JSON.stringify(sanitized);
+          return prevString === nextString ? prev : sanitized;
+        });
+      } catch {
+        // Ignore storage parse issues.
+      }
+    };
+
+    const handleStorage = (event) => {
+      if (
+        !event.key ||
+        event.key === GLOBAL_VERIFICATION_CACHE_KEY ||
+        event.key === `${VERIFICATION_CACHE_KEY_PREFIX}${userId}`
+      ) {
+        syncFromStorage();
+      }
+    };
+
+    const handleFocus = () => syncFromStorage();
+    const handleVisibility = () => {
+      if (document.visibilityState === "visible") {
+        syncFromStorage();
+      }
+    };
+
+    window.addEventListener("storage", handleStorage);
+    window.addEventListener("focus", handleFocus);
+    document.addEventListener("visibilitychange", handleVisibility);
+
+    return () => {
+      window.removeEventListener("storage", handleStorage);
+      window.removeEventListener("focus", handleFocus);
+      document.removeEventListener("visibilitychange", handleVisibility);
+    };
+  }, [userId, certificates]);
+
   const totalItems = useMemo(() => badges.length + certificates.length, [badges, certificates]);
 
   const resolveCertificateUrl = (url) => {
@@ -94,8 +159,9 @@ const BadgeCertificationPage = () => {
   const getVerificationMeta = (certificate) => {
     const credentialId = certificate?.credentialId;
     const result = credentialId ? verificationByCredential[credentialId] : null;
+    const isVerifiedInDb = Boolean(certificate?.verifiedAt);
 
-    if (result?.verified === true) {
+    if (result?.verified === true || isVerifiedInDb) {
       return {
         label: "Verified",
         className: "bg-emerald-100 text-emerald-700 border border-emerald-200",
@@ -121,7 +187,7 @@ const BadgeCertificationPage = () => {
         const credentialId = certificate?.credentialId;
         const result = credentialId ? verificationByCredential[credentialId] : null;
 
-        if (result?.verified === true) {
+        if (result?.verified === true || certificate?.verifiedAt) {
           acc.verified += 1;
         } else if (result?.verified === false) {
           acc.notVerified += 1;
@@ -145,28 +211,49 @@ const BadgeCertificationPage = () => {
       setVerifyingCredentialId(credentialId);
       const { data } = await API.get(`/credentials/verify/${encodeURIComponent(credentialId)}`);
       const verified = Boolean(data?.valid) && data?.status === "VALID";
+      const verificationResult = {
+        verified,
+        status: data?.status || "UNKNOWN",
+        checkedAt: new Date().toISOString(),
+        message: verified
+          ? "Certificate is valid and active"
+          : "Certificate verification failed",
+      };
 
       setVerificationByCredential((prev) => ({
         ...prev,
-        [credentialId]: {
-          verified,
-          status: data?.status || "UNKNOWN",
-          checkedAt: new Date().toISOString(),
-          message: verified
-            ? "Certificate is valid and active"
-            : "Certificate verification failed",
-        },
+        [credentialId]: verificationResult,
       }));
+
+      try {
+        const rawGlobalCache = localStorage.getItem(GLOBAL_VERIFICATION_CACHE_KEY);
+        const globalCache = rawGlobalCache ? JSON.parse(rawGlobalCache) : {};
+        globalCache[credentialId] = verificationResult;
+        localStorage.setItem(GLOBAL_VERIFICATION_CACHE_KEY, JSON.stringify(globalCache));
+      } catch {
+        // Ignore storage errors.
+      }
     } catch (verifyError) {
+      const verificationResult = {
+        verified: false,
+        status: "ERROR",
+        checkedAt: new Date().toISOString(),
+        message: verifyError?.response?.data?.message || "Unable to verify certificate",
+      };
+
       setVerificationByCredential((prev) => ({
         ...prev,
-        [credentialId]: {
-          verified: false,
-          status: "ERROR",
-          checkedAt: new Date().toISOString(),
-          message: verifyError?.response?.data?.message || "Unable to verify certificate",
-        },
+        [credentialId]: verificationResult,
       }));
+
+      try {
+        const rawGlobalCache = localStorage.getItem(GLOBAL_VERIFICATION_CACHE_KEY);
+        const globalCache = rawGlobalCache ? JSON.parse(rawGlobalCache) : {};
+        globalCache[credentialId] = verificationResult;
+        localStorage.setItem(GLOBAL_VERIFICATION_CACHE_KEY, JSON.stringify(globalCache));
+      } catch {
+        // Ignore storage errors.
+      }
     } finally {
       setVerifyingCredentialId("");
     }
@@ -196,6 +283,15 @@ const BadgeCertificationPage = () => {
           delete updated[credentialId];
           return updated;
         });
+
+        try {
+          const rawGlobalCache = localStorage.getItem(GLOBAL_VERIFICATION_CACHE_KEY);
+          const globalCache = rawGlobalCache ? JSON.parse(rawGlobalCache) : {};
+          delete globalCache[credentialId];
+          localStorage.setItem(GLOBAL_VERIFICATION_CACHE_KEY, JSON.stringify(globalCache));
+        } catch {
+          // Ignore storage errors.
+        }
       }
 
       setSelectedCertificate(null);

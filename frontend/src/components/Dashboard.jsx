@@ -56,7 +56,7 @@ const DashboardPage = () => {
     <div className="space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-700">
 
       {/* Welcome Banner */}
-      <div className="relative overflow-hidden rounded-3xl bg-indigo-600 p-8 text-white">
+      <div className="relative overflow-hidden rounded-3xl bg-indigo-700 p-8 text-white">
         <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
           <div>
             <h1 className="text-3xl font-extrabold tracking-tight">

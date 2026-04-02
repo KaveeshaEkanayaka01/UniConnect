@@ -1,7 +1,7 @@
 .hero-section {
   position: relative;
   min-height: 100vh;
-  color: #f7f5ef;
+  color: #f0eff7;
   font-family: "Outfit", sans-serif;
   overflow: hidden;
 }
@@ -102,8 +102,8 @@
   border: none;
   min-height: 62px;
   padding: 0 2rem;
-  background: #d6c49d;
-  color: #121926;
+  background: #052362;
+  color: #a2a4a9;
   text-transform: uppercase;
   font-weight: 700;
   letter-spacing: 0.12em;

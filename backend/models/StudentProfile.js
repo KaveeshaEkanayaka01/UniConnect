@@ -104,6 +104,10 @@ const certificateSchema = new mongoose.Schema(
       type: Date,
       default: Date.now,
     },
+    verifiedAt: {
+      type: Date,
+      default: null,
+    },
     issuedBy: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",

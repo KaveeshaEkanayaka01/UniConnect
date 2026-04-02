@@ -9,8 +9,8 @@ const SidebarLink = ({ to, label, icon: Icon, active, collapsed }) => {
         group relative flex items-center gap-3.5 px-4 py-3 rounded-2xl transition-all duration-300 ease-[cubic-bezier(0.34,1.56,0.64,1)]
         focus:outline-none focus:ring-2 focus:ring-indigo-500/40
         ${active 
-          ? 'bg-white text-indigo-600 shadow-xl shadow-indigo-500/10 border border-slate-100 translate-x-1' 
-          : 'text-slate-500 hover:bg-white hover:text-indigo-600 hover:shadow-sm hover:translate-x-1 border border-transparent'
+          ? 'bg-white text-indigo-700 shadow-xl shadow-indigo-500/10 border border-white/20 translate-x-1' 
+          : 'text-indigo-100 hover:bg-indigo-600 hover:text-white hover:shadow-sm hover:translate-x-1 border border-transparent'
         }
       `}
     >
@@ -32,7 +32,7 @@ const SidebarLink = ({ to, label, icon: Icon, active, collapsed }) => {
 
       {/* Label */}
       {!collapsed && (
-        <span className={`text-[13px] font-bold tracking-tight whitespace-nowrap transition-all duration-300 ${active ? 'text-slate-900' : ''}`}>
+        <span className={`text-[13px] font-bold tracking-tight whitespace-nowrap transition-all duration-300 ${active ? 'text-indigo-900' : ''}`}>
           {label}
         </span>
       )}

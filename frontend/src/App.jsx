@@ -17,6 +17,7 @@ import AdminPanel from "./components/AdminPanel";
 import BadgeCertificationPage from "./components/BadgeCertificationPage";
 import AccountSettingsPage from "./components/AccountSettingpage";
 import HomePage from "./components/Home/HomePage";
+import VerificationPage from "./components/VerificationPage";
 
 
 
@@ -30,6 +31,7 @@ function App() {
         <Route path="/Home" element={<HomePage/>}/>
         <Route path="/forgot-password" element={<ForgotPasswordPage />} />
         <Route path="/reset-password/:token" element={<ResetPasswordPage />} />
+        <Route path="/verify/:credentialId" element={<VerificationPage />} />
 
         <Route
           path="/admin"
