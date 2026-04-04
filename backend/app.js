@@ -3,7 +3,7 @@ const cors = require('cors');
 const path = require('path');
 const cron = require('node-cron');
 const dotenv = require('dotenv');
-const connectDB = require('./config/db');
+const mongoose = require('mongoose');
 const eventRoutes = require('./routes/eventRoutes');
 const registrationRoutes = require('./routes/registrationRoutes');
 const Event = require('./models/Event');
@@ -14,7 +14,13 @@ dotenv.config();
 
 const app = express();
 
-connectDB();
+// MongoDB Connection (same as your friend)
+mongoose.connect(process.env.MONGODB_URI || process.env.MONGO_URI)
+  .then(() => console.log('MongoDB Connected'))
+  .catch((err) => {
+    console.error(`Error: ${err.message}`);
+    process.exit(1);
+  });
 
 app.use(cors());
 app.use(express.json());
