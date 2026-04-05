@@ -37,6 +37,14 @@ import ElectionVote from "./components/club-manage/ElectionVote";
 // Protection
 import ProtectedRoute from "./components/ProtectedRoute";
 
+// News Module
+import NewsOnlyPage from "./components/NewsPages/NewsOnlyPage";
+import NewsPage from "./components/NewsPages/NewsPage";
+import ProjectFeed from "./components/pages/ProjectFeed";
+import UploadProject from "./components/pages/UploadProject";
+import ClubEventAnalysis from "./components/pages/ClubEventAnalysis";
+import NewsEditor from "./components/pages/NewsEditor";
+
 function App() {
   return (
     <BrowserRouter>
@@ -83,17 +91,21 @@ function App() {
 
           <Route path="/my-clubs" element={<MyClubs />} />
 
-          {/* Club Dashboard */}
           <Route path="/clubs/:clubId" element={<ClubDashboard />} />
-
-          {/* Club Manage */}
           <Route path="/clubs/:clubId/manage" element={<ClubManage />} />
-
-          {/* Election Details / Vote Page */}
           <Route
             path="/clubs/:clubId/elections/:electionId"
             element={<ElectionVote />}
           />
+
+          {/* News Module Routes */}
+          <Route path="/news-only" element={<NewsOnlyPage />} />
+          <Route path="/project-feed" element={<ProjectFeed />} />
+          <Route path="/upload-project" element={<UploadProject />} />
+          <Route path="/analysis" element={<ClubEventAnalysis />} />
+          <Route path="/manage-news" element={<NewsPage />} />
+          <Route path="/manage-news/new" element={<NewsEditor />} />
+          <Route path="/manage-news/edit/:id" element={<NewsEditor />} />
         </Route>
 
         {/* Fallback */}

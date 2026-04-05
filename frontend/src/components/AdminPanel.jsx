@@ -15,6 +15,12 @@ import {
   Layers3,
   FolderCog,
   FileText,
+  Newspaper,
+  FolderOpen,
+  PlusCircle,
+  Pencil,
+  Trash2,
+  ExternalLink,
 } from "lucide-react";
 
 const StatCard = ({ title, value, icon: Icon, tone }) => (
@@ -76,6 +82,27 @@ const initialClubForm = {
   presidentEmail: "",
 };
 
+const initialNewsForm = {
+  title: "",
+  summary: "",
+  content: "",
+  category: "General",
+  author: "",
+  imageUrl: "",
+  isPublished: true,
+};
+
+const initialProjectForm = {
+  title: "",
+  description: "",
+  category: "Web",
+  ownerName: "",
+  githubUrl: "",
+  liveUrl: "",
+  imageUrl: "",
+  status: "published",
+};
+
 const categories = [
   "Engineering",
   "Academic",
@@ -87,6 +114,25 @@ const categories = [
   "Arts",
 ];
 
+const newsCategories = [
+  "General",
+  "Events",
+  "Announcements",
+  "Achievements",
+  "Academic",
+  "Technology",
+];
+
+const projectCategories = [
+  "Web",
+  "Mobile",
+  "AI",
+  "Research",
+  "Community",
+  "Design",
+  "Other",
+];
+
 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 const AdminPanel = () => {
@@ -94,12 +140,18 @@ const AdminPanel = () => {
 
   const [search, setSearch] = useState("");
   const [clubSearch, setClubSearch] = useState("");
+  const [newsSearch, setNewsSearch] = useState("");
+  const [projectSearch, setProjectSearch] = useState("");
 
   const [users, setUsers] = useState([]);
   const [badges, setBadges] = useState([]);
   const [clubs, setClubs] = useState([]);
+  const [newsList, setNewsList] = useState([]);
+  const [projects, setProjects] = useState([]);
 
   const [selectedUserId, setSelectedUserId] = useState("");
+  const [selectedNewsId, setSelectedNewsId] = useState("");
+  const [selectedProjectId, setSelectedProjectId] = useState("");
 
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
@@ -117,6 +169,8 @@ const AdminPanel = () => {
   const [showRewardModal, setShowRewardModal] = useState(false);
   const [showBadgeModal, setShowBadgeModal] = useState(false);
   const [showClubModal, setShowClubModal] = useState(false);
+  const [showNewsModal, setShowNewsModal] = useState(false);
+  const [showProjectModal, setShowProjectModal] = useState(false);
 
   const [form, setForm] = useState(initialUserForm);
   const [rewardForm, setRewardForm] = useState(initialRewardForm);
@@ -124,6 +178,8 @@ const AdminPanel = () => {
   const [badgeForm, setBadgeForm] = useState(initialBadgeForm);
   const [clubForm, setClubForm] = useState(initialClubForm);
   const [constitutionFile, setConstitutionFile] = useState(null);
+  const [newsForm, setNewsForm] = useState(initialNewsForm);
+  const [projectForm, setProjectForm] = useState(initialProjectForm);
 
   const role = me?.role || "";
   const isSystemAdmin = role === "SYSTEM_ADMIN";
@@ -135,6 +191,8 @@ const AdminPanel = () => {
   const canApproveRejectClub = isSystemAdmin;
   const canDeleteClub = isSystemAdmin;
   const canSeeClubTab = isSystemAdmin || isClubAdmin;
+  const canManageNews = isSystemAdmin;
+  const canManageProjects = isSystemAdmin;
 
   const presidentEmailError =
     clubForm.presidentEmail.trim() &&
@@ -158,12 +216,30 @@ const AdminPanel = () => {
     setConstitutionFile(null);
   };
 
+  const resetNewsForm = () => {
+    setSelectedNewsId("");
+    setNewsForm(initialNewsForm);
+  };
+
+  const resetProjectForm = () => {
+    setSelectedProjectId("");
+    setProjectForm(initialProjectForm);
+  };
+
   const handleUserInputChange = (key, value) => {
     setForm((prev) => ({ ...prev, [key]: value }));
   };
 
   const handleClubInputChange = (key, value) => {
     setClubForm((prev) => ({ ...prev, [key]: value }));
+  };
+
+  const handleNewsInputChange = (key, value) => {
+    setNewsForm((prev) => ({ ...prev, [key]: value }));
+  };
+
+  const handleProjectInputChange = (key, value) => {
+    setProjectForm((prev) => ({ ...prev, [key]: value }));
   };
 
   const loadAdminData = async () => {
@@ -181,6 +257,8 @@ const AdminPanel = () => {
       let userList = [];
       let badgeList = [];
       let clubList = [];
+      let fetchedNews = [];
+      let fetchedProjects = [];
 
       try {
         const usersRes = await API.get("/admin/users");
@@ -214,7 +292,36 @@ const AdminPanel = () => {
         setHasClubAccess(false);
       }
 
-      if (!userList.length && !clubList.length) {
+      try {
+        const newsRes = await API.get("/admin/news");
+        fetchedNews = Array.isArray(newsRes.data?.data)
+          ? newsRes.data.data
+          : Array.isArray(newsRes.data)
+          ? newsRes.data
+          : [];
+        setNewsList(fetchedNews);
+      } catch {
+        setNewsList([]);
+      }
+
+      try {
+        const projectsRes = await API.get("/admin/projects");
+        fetchedProjects = Array.isArray(projectsRes.data?.data)
+          ? projectsRes.data.data
+          : Array.isArray(projectsRes.data)
+          ? projectsRes.data
+          : [];
+        setProjects(fetchedProjects);
+      } catch {
+        setProjects([]);
+      }
+
+      if (
+        !userList.length &&
+        !clubList.length &&
+        !fetchedNews.length &&
+        !fetchedProjects.length
+      ) {
         setMessage("Some admin modules are unavailable.");
       }
     } catch (error) {
@@ -254,11 +361,9 @@ const AdminPanel = () => {
 
   const filteredClubs = useMemo(() => {
     const q = clubSearch.trim().toLowerCase();
-    const source = clubs;
+    if (!q) return clubs;
 
-    if (!q) return source;
-
-    return source.filter((club) =>
+    return clubs.filter((club) =>
       [
         club.name,
         club.description,
@@ -274,6 +379,42 @@ const AdminPanel = () => {
     );
   }, [clubSearch, clubs]);
 
+  const filteredNews = useMemo(() => {
+    const q = newsSearch.trim().toLowerCase();
+    if (!q) return newsList;
+
+    return newsList.filter((item) =>
+      [
+        item.title,
+        item.summary,
+        item.content,
+        item.category,
+        item.author,
+      ]
+        .join(" ")
+        .toLowerCase()
+        .includes(q)
+    );
+  }, [newsSearch, newsList]);
+
+  const filteredProjects = useMemo(() => {
+    const q = projectSearch.trim().toLowerCase();
+    if (!q) return projects;
+
+    return projects.filter((item) =>
+      [
+        item.title,
+        item.description,
+        item.category,
+        item.ownerName,
+        item.status,
+      ]
+        .join(" ")
+        .toLowerCase()
+        .includes(q)
+    );
+  }, [projectSearch, projects]);
+
   const selectedUser = useMemo(
     () => users.find((item) => String(item._id) === String(selectedUserId)),
     [users, selectedUserId]
@@ -281,15 +422,21 @@ const AdminPanel = () => {
 
   const totalStudents = users.filter((u) => u.role === "STUDENT").length;
   const activeUsers = users.filter((u) => u.isActive).length;
-  const activeMentors = 0;
   const inactiveUsers = users.filter((u) => !u.isActive).length;
+  const activeMentors = 0;
 
-  const clubStatsSource = clubs;
+  const totalClubs = clubs.length;
+  const activeClubs = clubs.filter((c) => c.status === "active").length;
+  const pendingClubs = clubs.filter((c) => c.status === "pending").length;
+  const rejectedClubs = clubs.filter((c) => c.status === "rejected").length;
 
-  const totalClubs = clubStatsSource.length;
-  const activeClubs = clubStatsSource.filter((c) => c.status === "active").length;
-  const pendingClubs = clubStatsSource.filter((c) => c.status === "pending").length;
-  const rejectedClubs = clubStatsSource.filter((c) => c.status === "rejected").length;
+  const totalNews = newsList.length;
+  const publishedNews = newsList.filter((n) => n.isPublished !== false).length;
+
+  const totalProjects = projects.length;
+  const publishedProjects = projects.filter(
+    (p) => (p.status || "").toLowerCase() === "published"
+  ).length;
 
   const openEditModal = (user) => {
     setSelectedUserId(user._id);
@@ -314,6 +461,35 @@ const AdminPanel = () => {
     setRewardForm(initialRewardForm);
     setCertificateImageFile(null);
     setShowRewardModal(true);
+  };
+
+  const openEditNewsModal = (item) => {
+    setSelectedNewsId(item._id);
+    setNewsForm({
+      title: item.title || "",
+      summary: item.summary || "",
+      content: item.content || "",
+      category: item.category || "General",
+      author: item.author || "",
+      imageUrl: item.imageUrl || "",
+      isPublished: item.isPublished !== false,
+    });
+    setShowNewsModal(true);
+  };
+
+  const openEditProjectModal = (item) => {
+    setSelectedProjectId(item._id);
+    setProjectForm({
+      title: item.title || "",
+      description: item.description || "",
+      category: item.category || "Web",
+      ownerName: item.ownerName || "",
+      githubUrl: item.githubUrl || "",
+      liveUrl: item.liveUrl || "",
+      imageUrl: item.imageUrl || "",
+      status: item.status || "published",
+    });
+    setShowProjectModal(true);
   };
 
   const handleSaveUser = async (event) => {
@@ -564,12 +740,126 @@ const AdminPanel = () => {
     }
   };
 
+  const handleSaveNews = async (event) => {
+    event.preventDefault();
+    setMessage("");
+
+    if (!isSystemAdmin) {
+      setMessage("Only system admins can manage news.");
+      return;
+    }
+
+    if (!newsForm.title.trim() || !newsForm.summary.trim() || !newsForm.content.trim()) {
+      setMessage("Title, summary, and content are required for news.");
+      return;
+    }
+
+    try {
+      setIsSaving(true);
+
+      if (selectedNewsId) {
+        await API.put(`/admin/news/${selectedNewsId}`, newsForm);
+        setMessage("News updated successfully");
+      } else {
+        await API.post("/admin/news", newsForm);
+        setMessage("News created successfully");
+      }
+
+      resetNewsForm();
+      setShowNewsModal(false);
+      await loadAdminData();
+    } catch (error) {
+      setMessage(error?.response?.data?.message || "Failed to save news");
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleDeleteNews = async (newsId) => {
+    if (!isSystemAdmin) {
+      setMessage("Only system admins can delete news.");
+      return;
+    }
+
+    const ok = window.confirm("Delete this news item permanently?");
+    if (!ok) return;
+
+    try {
+      await API.delete(`/admin/news/${newsId}`);
+      setMessage("News deleted successfully");
+      await loadAdminData();
+    } catch (error) {
+      setMessage(error?.response?.data?.message || "Failed to delete news");
+    }
+  };
+
+  const handleSaveProject = async (event) => {
+    event.preventDefault();
+    setMessage("");
+
+    if (!isSystemAdmin) {
+      setMessage("Only system admins can manage projects.");
+      return;
+    }
+
+    if (!projectForm.title.trim() || !projectForm.description.trim()) {
+      setMessage("Project title and description are required.");
+      return;
+    }
+
+    try {
+      setIsSaving(true);
+
+      if (selectedProjectId) {
+        await API.put(`/admin/projects/${selectedProjectId}`, projectForm);
+        setMessage("Project updated successfully");
+      } else {
+        await API.post("/admin/projects", projectForm);
+        setMessage("Project created successfully");
+      }
+
+      resetProjectForm();
+      setShowProjectModal(false);
+      await loadAdminData();
+    } catch (error) {
+      setMessage(error?.response?.data?.message || "Failed to save project");
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleDeleteProject = async (projectId) => {
+    if (!isSystemAdmin) {
+      setMessage("Only system admins can delete projects.");
+      return;
+    }
+
+    const ok = window.confirm("Delete this project permanently?");
+    if (!ok) return;
+
+    try {
+      await API.delete(`/admin/projects/${projectId}`);
+      setMessage("Project deleted successfully");
+      await loadAdminData();
+    } catch (error) {
+      setMessage(error?.response?.data?.message || "Failed to delete project");
+    }
+  };
+
   const openClubWorkspace = (club) => {
     navigate(`/clubs/${club._id}`);
   };
 
   const openClubManage = (club) => {
     navigate(`/clubs/${club._id}/manage`);
+  };
+
+  const openNewsPage = () => {
+    navigate("/news");
+  };
+
+  const openUploadProjectPage = () => {
+    navigate("/upload-project");
   };
 
   return (
@@ -585,7 +875,7 @@ const AdminPanel = () => {
 
         <p className="mt-2 text-sm text-slate-500 max-w-2xl">
           {isSystemAdmin
-            ? "Manage platform users, clubs, and badges from one place."
+            ? "Manage platform users, clubs, badges, news, and projects from one place."
             : "As a club admin, you can open and manage clubs from this panel, but you cannot create, approve, reject, or delete clubs."}
         </p>
 
@@ -631,6 +921,26 @@ const AdminPanel = () => {
             </button>
           )}
 
+          {canManageNews && (
+            <button
+              onClick={() => setActiveTab("news")}
+              className={tabButtonClass(activeTab === "news")}
+            >
+              <Newspaper size={16} />
+              News
+            </button>
+          )}
+
+          {canManageProjects && (
+            <button
+              onClick={() => setActiveTab("projects")}
+              className={tabButtonClass(activeTab === "projects")}
+            >
+              <FolderOpen size={16} />
+              Projects
+            </button>
+          )}
+
           {canManageBadges && (
             <button
               onClick={() => setActiveTab("badges")}
@@ -659,24 +969,23 @@ const AdminPanel = () => {
               tone="bg-emerald-50 text-emerald-600"
             />
             <StatCard
-              title="Mentors"
-              value={activeMentors}
-              icon={Users}
-              tone="bg-amber-50 text-amber-600"
+              title="News Posts"
+              value={totalNews}
+              icon={Newspaper}
+              tone="bg-cyan-50 text-cyan-600"
             />
             <StatCard
-              title="Inactive Users"
-              value={inactiveUsers}
-              icon={ShieldAlert}
-              tone="bg-rose-50 text-rose-600"
+              title="Projects"
+              value={totalProjects}
+              icon={FolderOpen}
+              tone="bg-violet-50 text-violet-600"
             />
           </div>
 
           <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm">
             <h2 className="text-xl font-black text-slate-900">System Summary</h2>
             <p className="mt-2 text-sm text-slate-500">
-              Use the Users tab for account management and the Clubs tab for club
-              creation, approval, and tracking.
+              Manage users, clubs, news, projects, and badges from this panel.
             </p>
 
             <div className="mt-5 flex flex-wrap gap-3">
@@ -692,6 +1001,34 @@ const AdminPanel = () => {
                 className="px-4 py-2 rounded-xl border border-slate-200 text-slate-700 text-sm font-bold hover:bg-slate-50"
               >
                 Open User Management
+              </button>
+
+              <button
+                onClick={() => setActiveTab("news")}
+                className="px-4 py-2 rounded-xl border border-slate-200 text-slate-700 text-sm font-bold hover:bg-slate-50"
+              >
+                Open News Management
+              </button>
+
+              <button
+                onClick={() => setActiveTab("projects")}
+                className="px-4 py-2 rounded-xl border border-slate-200 text-slate-700 text-sm font-bold hover:bg-slate-50"
+              >
+                Open Project Management
+              </button>
+
+              <button
+                onClick={openNewsPage}
+                className="px-4 py-2 rounded-xl border border-indigo-200 text-indigo-700 text-sm font-bold hover:bg-indigo-50"
+              >
+                Go to NewsPage
+              </button>
+
+              <button
+                onClick={openUploadProjectPage}
+                className="px-4 py-2 rounded-xl border border-violet-200 text-violet-700 text-sm font-bold hover:bg-violet-50"
+              >
+                Go to UploadProject
               </button>
             </div>
           </div>
@@ -1029,6 +1366,280 @@ const AdminPanel = () => {
                       <tr>
                         <td colSpan={7} className="py-6 text-center text-slate-500">
                           No clubs found
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        </>
+      )}
+
+      {activeTab === "news" && canManageNews && (
+        <>
+          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-5">
+            <StatCard
+              title="Total News"
+              value={totalNews}
+              icon={Newspaper}
+              tone="bg-cyan-50 text-cyan-600"
+            />
+            <StatCard
+              title="Published News"
+              value={publishedNews}
+              icon={BadgeCheck}
+              tone="bg-emerald-50 text-emerald-600"
+            />
+            <StatCard
+              title="Draft News"
+              value={totalNews - publishedNews}
+              icon={FileText}
+              tone="bg-amber-50 text-amber-600"
+            />
+            <StatCard
+              title="Public Page"
+              value="NewsPage"
+              icon={ExternalLink}
+              tone="bg-violet-50 text-violet-600"
+            />
+          </div>
+
+          <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm">
+            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 mb-5">
+              <h2 className="text-xl font-black text-slate-900">Manage News</h2>
+
+              <div className="flex gap-3">
+                <button
+                  onClick={() => {
+                    resetNewsForm();
+                    setShowNewsModal(true);
+                  }}
+                  className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-cyan-600 text-white text-sm font-bold hover:bg-cyan-700"
+                >
+                  <PlusCircle size={16} /> Add News
+                </button>
+
+                <button
+                  onClick={openNewsPage}
+                  className="inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-cyan-200 text-cyan-700 text-sm font-bold hover:bg-cyan-50"
+                >
+                  <ExternalLink size={16} /> Open NewsPage
+                </button>
+              </div>
+
+              <div className="relative w-full lg:w-96">
+                <Search
+                  size={16}
+                  className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
+                />
+                <input
+                  value={newsSearch}
+                  onChange={(e) => setNewsSearch(e.target.value)}
+                  placeholder="Search news by title, category, author..."
+                  className="w-full pl-9 pr-4 py-2.5 text-sm rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-cyan-200"
+                />
+              </div>
+            </div>
+
+            {isLoading ? (
+              <p className="text-sm text-slate-500">Loading news...</p>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="text-left border-b border-slate-200 text-slate-500">
+                      <th className="py-3 pr-4">Title</th>
+                      <th className="py-3 pr-4">Category</th>
+                      <th className="py-3 pr-4">Author</th>
+                      <th className="py-3 pr-4">Status</th>
+                      <th className="py-3 text-right">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredNews.map((item) => (
+                      <tr
+                        key={item._id}
+                        className="border-b border-slate-100 hover:bg-slate-50"
+                      >
+                        <td className="py-3 pr-4">
+                          <p className="font-semibold text-slate-800">{item.title}</p>
+                          <p className="text-xs text-slate-500 line-clamp-1">
+                            {item.summary}
+                          </p>
+                        </td>
+                        <td className="py-3 pr-4 text-slate-600">{item.category || "-"}</td>
+                        <td className="py-3 pr-4 text-slate-600">{item.author || "-"}</td>
+                        <td className="py-3 pr-4">
+                          <span
+                            className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold ${
+                              item.isPublished !== false
+                                ? "bg-emerald-50 text-emerald-700"
+                                : "bg-amber-50 text-amber-700"
+                            }`}
+                          >
+                            {item.isPublished !== false ? "Published" : "Draft"}
+                          </span>
+                        </td>
+                        <td className="py-3 text-right">
+                          <div className="inline-flex gap-2">
+                            <button
+                              onClick={() => openEditNewsModal(item)}
+                              className="px-3 py-1.5 rounded-lg border border-slate-200 text-slate-700 hover:bg-slate-100 text-xs font-semibold inline-flex items-center gap-1"
+                            >
+                              <Pencil size={14} />
+                              Edit
+                            </button>
+                            <button
+                              onClick={() => handleDeleteNews(item._id)}
+                              className="px-3 py-1.5 rounded-lg bg-rose-600 text-white hover:bg-rose-700 text-xs font-semibold inline-flex items-center gap-1"
+                            >
+                              <Trash2 size={14} />
+                              Delete
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                    {!filteredNews.length && (
+                      <tr>
+                        <td colSpan={5} className="py-6 text-center text-slate-500">
+                          No news found
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        </>
+      )}
+
+      {activeTab === "projects" && canManageProjects && (
+        <>
+          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-5">
+            <StatCard
+              title="Total Projects"
+              value={totalProjects}
+              icon={FolderOpen}
+              tone="bg-violet-50 text-violet-600"
+            />
+            <StatCard
+              title="Published Projects"
+              value={publishedProjects}
+              icon={BadgeCheck}
+              tone="bg-emerald-50 text-emerald-600"
+            />
+            <StatCard
+              title="Draft Projects"
+              value={totalProjects - publishedProjects}
+              icon={FileText}
+              tone="bg-amber-50 text-amber-600"
+            />
+            <StatCard
+              title="Upload Page"
+              value="UploadProject"
+              icon={ExternalLink}
+              tone="bg-indigo-50 text-indigo-600"
+            />
+          </div>
+
+          <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm">
+            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 mb-5">
+              <h2 className="text-xl font-black text-slate-900">Manage Projects</h2>
+
+              <div className="flex gap-3">
+                <button
+                  onClick={() => {
+                    resetProjectForm();
+                    setShowProjectModal(true);
+                  }}
+                  className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-violet-600 text-white text-sm font-bold hover:bg-violet-700"
+                >
+                  <PlusCircle size={16} /> Add Project
+                </button>
+
+                <button
+                  onClick={openUploadProjectPage}
+                  className="inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-violet-200 text-violet-700 text-sm font-bold hover:bg-violet-50"
+                >
+                  <ExternalLink size={16} /> Open UploadProject
+                </button>
+              </div>
+
+              <div className="relative w-full lg:w-96">
+                <Search
+                  size={16}
+                  className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
+                />
+                <input
+                  value={projectSearch}
+                  onChange={(e) => setProjectSearch(e.target.value)}
+                  placeholder="Search projects by title, category, owner..."
+                  className="w-full pl-9 pr-4 py-2.5 text-sm rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-violet-200"
+                />
+              </div>
+            </div>
+
+            {isLoading ? (
+              <p className="text-sm text-slate-500">Loading projects...</p>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="text-left border-b border-slate-200 text-slate-500">
+                      <th className="py-3 pr-4">Project</th>
+                      <th className="py-3 pr-4">Category</th>
+                      <th className="py-3 pr-4">Owner</th>
+                      <th className="py-3 pr-4">Status</th>
+                      <th className="py-3 text-right">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredProjects.map((item) => (
+                      <tr
+                        key={item._id}
+                        className="border-b border-slate-100 hover:bg-slate-50"
+                      >
+                        <td className="py-3 pr-4">
+                          <p className="font-semibold text-slate-800">{item.title}</p>
+                          <p className="text-xs text-slate-500 line-clamp-1">
+                            {item.description}
+                          </p>
+                        </td>
+                        <td className="py-3 pr-4 text-slate-600">{item.category || "-"}</td>
+                        <td className="py-3 pr-4 text-slate-600">{item.ownerName || "-"}</td>
+                        <td className="py-3 pr-4">
+                          <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold bg-slate-100 text-slate-700">
+                            {item.status || "published"}
+                          </span>
+                        </td>
+                        <td className="py-3 text-right">
+                          <div className="inline-flex gap-2">
+                            <button
+                              onClick={() => openEditProjectModal(item)}
+                              className="px-3 py-1.5 rounded-lg border border-slate-200 text-slate-700 hover:bg-slate-100 text-xs font-semibold inline-flex items-center gap-1"
+                            >
+                              <Pencil size={14} />
+                              Edit
+                            </button>
+                            <button
+                              onClick={() => handleDeleteProject(item._id)}
+                              className="px-3 py-1.5 rounded-lg bg-rose-600 text-white hover:bg-rose-700 text-xs font-semibold inline-flex items-center gap-1"
+                            >
+                              <Trash2 size={14} />
+                              Delete
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                    {!filteredProjects.length && (
+                      <tr>
+                        <td colSpan={5} className="py-6 text-center text-slate-500">
+                          No projects found
                         </td>
                       </tr>
                     )}
@@ -1557,6 +2168,224 @@ const AdminPanel = () => {
                 <button
                   type="button"
                   onClick={() => setShowClubModal(false)}
+                  className="px-3 py-2 rounded-lg border border-slate-200 text-sm font-semibold"
+                >
+                  Cancel
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {showNewsModal && canManageNews && (
+        <div className="fixed inset-0 z-50 bg-slate-900/70 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="w-full max-w-2xl bg-white rounded-3xl border border-slate-200 shadow-2xl overflow-hidden">
+            <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
+              <h3 className="text-lg font-black text-slate-900 flex items-center gap-2">
+                <Newspaper size={18} /> {selectedNewsId ? "Edit News" : "Add News"}
+              </h3>
+              <button
+                onClick={() => setShowNewsModal(false)}
+                className="p-2 rounded-lg text-slate-500 hover:bg-slate-100"
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveNews} className="p-6 space-y-3">
+              <input
+                value={newsForm.title}
+                onChange={(e) => handleNewsInputChange("title", e.target.value)}
+                placeholder="News Title"
+                className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm"
+                required
+              />
+
+              <input
+                value={newsForm.summary}
+                onChange={(e) => handleNewsInputChange("summary", e.target.value)}
+                placeholder="Short Summary"
+                className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm"
+                required
+              />
+
+              <textarea
+                value={newsForm.content}
+                onChange={(e) => handleNewsInputChange("content", e.target.value)}
+                placeholder="Full Content"
+                rows={6}
+                className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm"
+                required
+              />
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <select
+                  value={newsForm.category}
+                  onChange={(e) => handleNewsInputChange("category", e.target.value)}
+                  className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm"
+                >
+                  {newsCategories.map((category) => (
+                    <option key={category} value={category}>
+                      {category}
+                    </option>
+                  ))}
+                </select>
+
+                <input
+                  value={newsForm.author}
+                  onChange={(e) => handleNewsInputChange("author", e.target.value)}
+                  placeholder="Author"
+                  className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm"
+                />
+              </div>
+
+              <input
+                value={newsForm.imageUrl}
+                onChange={(e) => handleNewsInputChange("imageUrl", e.target.value)}
+                placeholder="Image URL"
+                className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm"
+              />
+
+              <label className="flex items-center gap-2 text-sm text-slate-700">
+                <input
+                  type="checkbox"
+                  checked={newsForm.isPublished}
+                  onChange={(e) =>
+                    handleNewsInputChange("isPublished", e.target.checked)
+                  }
+                />
+                Publish this news item
+              </label>
+
+              <div className="flex gap-2 pt-3 border-t border-slate-100">
+                <button
+                  type="submit"
+                  disabled={isSaving}
+                  className="flex-1 px-3 py-2 rounded-lg bg-cyan-600 text-white text-sm font-semibold hover:bg-cyan-700 disabled:opacity-60"
+                >
+                  {selectedNewsId ? "Update News" : "Create News"}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowNewsModal(false)}
+                  className="px-3 py-2 rounded-lg border border-slate-200 text-sm font-semibold"
+                >
+                  Cancel
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {showProjectModal && canManageProjects && (
+        <div className="fixed inset-0 z-50 bg-slate-900/70 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="w-full max-w-2xl bg-white rounded-3xl border border-slate-200 shadow-2xl overflow-hidden">
+            <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
+              <h3 className="text-lg font-black text-slate-900 flex items-center gap-2">
+                <FolderOpen size={18} />{" "}
+                {selectedProjectId ? "Edit Project" : "Add Project"}
+              </h3>
+              <button
+                onClick={() => setShowProjectModal(false)}
+                className="p-2 rounded-lg text-slate-500 hover:bg-slate-100"
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveProject} className="p-6 space-y-3">
+              <input
+                value={projectForm.title}
+                onChange={(e) => handleProjectInputChange("title", e.target.value)}
+                placeholder="Project Title"
+                className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm"
+                required
+              />
+
+              <textarea
+                value={projectForm.description}
+                onChange={(e) =>
+                  handleProjectInputChange("description", e.target.value)
+                }
+                placeholder="Project Description"
+                rows={5}
+                className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm"
+                required
+              />
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <select
+                  value={projectForm.category}
+                  onChange={(e) =>
+                    handleProjectInputChange("category", e.target.value)
+                  }
+                  className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm"
+                >
+                  {projectCategories.map((category) => (
+                    <option key={category} value={category}>
+                      {category}
+                    </option>
+                  ))}
+                </select>
+
+                <select
+                  value={projectForm.status}
+                  onChange={(e) => handleProjectInputChange("status", e.target.value)}
+                  className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm"
+                >
+                  <option value="published">Published</option>
+                  <option value="draft">Draft</option>
+                  <option value="archived">Archived</option>
+                </select>
+              </div>
+
+              <input
+                value={projectForm.ownerName}
+                onChange={(e) =>
+                  handleProjectInputChange("ownerName", e.target.value)
+                }
+                placeholder="Owner / Team Name"
+                className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm"
+              />
+
+              <input
+                value={projectForm.githubUrl}
+                onChange={(e) =>
+                  handleProjectInputChange("githubUrl", e.target.value)
+                }
+                placeholder="GitHub URL"
+                className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm"
+              />
+
+              <input
+                value={projectForm.liveUrl}
+                onChange={(e) => handleProjectInputChange("liveUrl", e.target.value)}
+                placeholder="Live Demo URL"
+                className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm"
+              />
+
+              <input
+                value={projectForm.imageUrl}
+                onChange={(e) =>
+                  handleProjectInputChange("imageUrl", e.target.value)
+                }
+                placeholder="Project Image URL"
+                className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm"
+              />
+
+              <div className="flex gap-2 pt-3 border-t border-slate-100">
+                <button
+                  type="submit"
+                  disabled={isSaving}
+                  className="flex-1 px-3 py-2 rounded-lg bg-violet-600 text-white text-sm font-semibold hover:bg-violet-700 disabled:opacity-60"
+                >
+                  {selectedProjectId ? "Update Project" : "Create Project"}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowProjectModal(false)}
                   className="px-3 py-2 rounded-lg border border-slate-200 text-sm font-semibold"
                 >
                   Cancel
