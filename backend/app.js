@@ -4,6 +4,10 @@ import cors from "cors";
 import mongoose from "mongoose";
 import path from "path";
 
+// Routes
+import newsRoutes from "./routes/newsRoutes.js";
+import projectRoutes from "./routes/projectRoutes.js";
+
 import authRoutes from "./routes/authRoutes.js";
 import studentRoutes from "./routes/studentRoutes.js";
 import adminRoutes from "./routes/adminRoutes.js";
@@ -19,7 +23,7 @@ dotenv.config();
 
 const app = express();
 
-// CORE MIDDLEWARE
+// ✅ Middleware (use better version from dev)
 app.use(
   cors({
     origin: true,
@@ -30,26 +34,26 @@ app.use(
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// STATIC FILES
-
+// ✅ Static folder
 app.use("/uploads", express.static(path.resolve("uploads")));
 
-// BASIC ROUTES
+// ✅ Basic Routes
 app.get("/", (req, res) => {
   res.status(200).json({
-    message: "UniConnect backend is running",
+    message: "Club Management System API Running...",
   });
 });
 
 app.get("/api/health", (req, res) => {
   res.status(200).json({
     status: "OK",
-    message: "Server is healthy",
   });
 });
 
+// ✅ Combine ALL routes
+app.use("/news", newsRoutes);
+app.use("/api/projects", projectRoutes);
 
-// API ROUTES
 app.use("/api/auth", authRoutes);
 app.use("/api/student", studentRoutes);
 app.use("/api/admin", adminRoutes);
@@ -61,15 +65,14 @@ app.use("/api/clubevents", clubeventRoutes);
 app.use("/api/elections", electionRoutes);
 app.use("/api/mentorships", mentorshipRoutes);
 
-// 404 HANDLER
+// ✅ 404 handler
 app.use((req, res) => {
   res.status(404).json({
     message: "Route not found",
   });
 });
 
-
-// GLOBAL ERROR HANDLER
+// ✅ Global error handler
 app.use((err, req, res, next) => {
   console.error("Global error handler:", err);
 
@@ -84,7 +87,7 @@ app.use((err, req, res, next) => {
   });
 });
 
-// MONGODB CONNECTION + SERVER
+// ✅ MongoDB + Server (use better dev version)
 mongoose
   .connect(process.env.MONGO_URI)
   .then(() => {
