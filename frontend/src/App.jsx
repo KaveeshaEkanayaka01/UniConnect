@@ -42,8 +42,8 @@ function App() {
     <BrowserRouter>
       <Routes>
         {/* Public Routes */}
-        <Route path="/" element={<LandingPage />} />
-        <Route path="/home" element={<HomePage />} />
+        <Route path="/LandingPage" element={<LandingPage />} />
+        <Route path="/" element={<HomePage />} />
         <Route path="/register" element={<Register />} />
         <Route path="/login" element={<Login />} />
         <Route path="/forgot-password" element={<ForgotPasswordPage />} />
