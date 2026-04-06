@@ -29,6 +29,24 @@ const DashboardPage = () => {
   const navigate = useNavigate();
   const displayFaculty = profile?.faculty || user?.faculty || "Not set";
   const displayYear = profile?.yearOfStudy || user?.yearOfStudy || "Not set";
+  const deriveSkillNames = (profile) => {
+    if (!profile) return [];
+
+    if (Array.isArray(profile.skillDetails) && profile.skillDetails.length) {
+      return profile.skillDetails
+        .map((d) => {
+          const s = d?.skill;
+          return (s && s.name) || (typeof s === "string" ? s : d?.name) || "";
+        })
+        .filter(Boolean);
+    }
+
+    if (Array.isArray(profile.skills)) {
+      return profile.skills.map((s) => (typeof s === "string" ? s : s?.name || "")).filter(Boolean);
+    }
+
+    return [];
+  };
 
   useEffect(() => {
     const fetchDashboardData = async () => {
@@ -55,6 +73,9 @@ const DashboardPage = () => {
   return (
     <div className="space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-700">
 
+      {/* Main content */}
+      <main className="space-y-10">
+
       {/* Welcome Banner */}
       <div className="relative overflow-hidden rounded-3xl bg-indigo-700 p-8 text-white">
         <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
@@ -65,18 +86,38 @@ const DashboardPage = () => {
             <p className="mt-2 text-indigo-100 max-w-lg">
               Faculty: {displayFaculty} • Year {displayYear}
             </p>
-            <div className="flex items-center gap-4 mt-6">
+            <div className="flex flex-wrap items-center gap-3 mt-6">
               <Link
                 to="/profile"
-                className="bg-white text-indigo-600 px-6 py-2.5 rounded-xl font-bold text-sm shadow hover:scale-105 transition-transform"
+                className="bg-white text-indigo-600 px-4 py-2.5 rounded-xl font-bold text-sm shadow hover:scale-105 transition-transform"
               >
                 View Profile
               </Link>
               <Link
                 to="/skills"
-                className="bg-indigo-500 text-white px-6 py-2.5 rounded-xl font-bold text-sm hover:bg-indigo-400 transition"
+                className="bg-indigo-500 text-white px-4 py-2.5 rounded-xl font-bold text-sm hover:bg-indigo-400 transition"
               >
                 Add Skills
+              </Link>
+              <Link
+                to="/news-only"
+                className="border border-slate-200 text-slate-700 px-4 py-2.5 rounded-xl text-sm font-semibold hover:bg-slate-50"
+              >
+                News
+              </Link>
+
+              <Link
+                to="/project-feed"
+                className="border border-slate-200 text-slate-700 px-4 py-2.5 rounded-xl text-sm font-semibold hover:bg-slate-50"
+              >
+                Project Feed
+              </Link>
+
+              <Link
+                to="/analysis"
+                className="border border-slate-200 text-slate-700 px-4 py-2.5 rounded-xl text-sm font-semibold hover:bg-slate-50"
+              >
+                Analysis
               </Link>
             </div>
           </div>
@@ -102,6 +143,27 @@ const DashboardPage = () => {
           <p><b>Student ID:</b> {user.studentId}</p>
           <p><b>Faculty:</b> {displayFaculty}</p>
           <p><b>Year:</b> {displayYear}</p>
+
+          {/* Skills preview */}
+          <div className="mt-3">
+            <h4 className="text-sm font-semibold text-slate-700">Skills</h4>
+            {deriveSkillNames(profile).length ? (
+              <div className="mt-2 flex flex-wrap gap-2">
+                {deriveSkillNames(profile).slice(0, 8).map((s, i) => (
+                  <span key={`${s}-${i}`} className="px-3 py-1 rounded-full bg-slate-100 text-slate-700 text-sm">
+                    {s}
+                  </span>
+                ))}
+                {deriveSkillNames(profile).length > 8 && (
+                  <span className="px-3 py-1 rounded-full bg-slate-50 text-slate-500 text-sm">+{deriveSkillNames(profile).length - 8} more</span>
+                )}
+              </div>
+            ) : (
+              <p className="mt-2 text-sm text-slate-500">No skills added yet.</p>
+            )}
+
+            <Link to="/skills" className="mt-3 inline-block text-indigo-600 font-semibold text-sm hover:underline">Manage Skills</Link>
+          </div>
 
           <Link
             to="/profile"
@@ -136,6 +198,7 @@ const DashboardPage = () => {
           )}
         </div>
       </div>
+      </main>
     </div>
   );
 };

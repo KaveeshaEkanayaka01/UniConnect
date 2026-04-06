@@ -693,6 +693,13 @@ const AdminPanel = () => {
               >
                 Open User Management
               </button>
+ 
+              <button
+                onClick={() => navigate('/admin-dashboard')}
+                className="px-4 py-2 rounded-xl bg-indigo-600 text-white text-sm font-bold hover:bg-indigo-700"
+              >
+                Manage News & Projects
+              </button>
             </div>
           </div>
         </>

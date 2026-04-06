@@ -1,9 +1,9 @@
 import { useNavigate } from "react-router-dom";
 
 const sidebarItems = [
-  { icon: "🏠", label: "Dashboard",       path: "/admindashboard" },
-  { icon: "📰", label: "Manage News",     path: "/Managenews" },
-  { icon: "🚀", label: "Manage Projects", path: "/UploadProject" },
+  { icon: "🏠", label: "Dashboard",       path: "/admin-dashboard" },
+  { icon: "📰", label: "Manage News",     path: "/manage-news" },
+  { icon: "🚀", label: "Manage Projects", path: "/upload-project" },
 ];
 
 const statCards = [
@@ -14,8 +14,8 @@ const statCards = [
 ];
 
 const quickActions = [
-  { icon: "✏️", label: "Add News",    path: "/Managenews",    color: "from-indigo-500 to-purple-600" },
-  { icon: "📤", label: "Add Project", path: "/UploadProject", color: "from-sky-500 to-cyan-600"      },
+  { icon: "✏️", label: "Add News",    path: "/manage-news/new",    color: "from-indigo-500 to-purple-600" },
+  { icon: "📤", label: "Add Project", path: "/upload-project",      color: "from-sky-500 to-cyan-600"      },
 ];
 
 const recentActivities = [
@@ -159,7 +159,7 @@ const AdminDashboard = () => {
             <h3 className="text-slate-800 font-semibold text-base mb-5">📂 Manage Content</h3>
             <div className="grid sm:grid-cols-2 gap-4">
               <button
-                onClick={() => navigate("/Managenews")}
+                onClick={() => navigate("/manage-news")}
                 className="flex items-center justify-between p-5 rounded-xl border border-slate-200 hover:border-indigo-300 hover:bg-indigo-50/50 transition-all group"
               >
                 <div className="flex items-center gap-3">
@@ -174,7 +174,7 @@ const AdminDashboard = () => {
                 </svg>
               </button>
               <button
-                onClick={() => navigate("/UploadProject")}
+                onClick={() => navigate("/upload-project")}
                 className="flex items-center justify-between p-5 rounded-xl border border-slate-200 hover:border-sky-300 hover:bg-sky-50/50 transition-all group"
               >
                 <div className="flex items-center gap-3">
