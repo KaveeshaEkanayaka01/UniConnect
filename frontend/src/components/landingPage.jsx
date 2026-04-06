@@ -15,41 +15,6 @@ const LandingPage = () => {
       {/* Top line */}
       <div className="h-1 w-full bg-gradient-to-r from-[#ffffff] via-[#9eb1d7] to-[#2b4f93]" />
 
-      {/* Navbar */}
-      <nav className="sticky top-0 z-40 bg-[#0f141f]/72 backdrop-blur-md border-b border-[#9eb1d7]/35">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
-          
-          <div className="flex items-center space-x-3">
-            <div className="h-14 w-14 rounded-full bg-white/95 p-1 ring-1 ring-[#9eb1d7]/50 shadow-md">
-              <img src={appLogo} alt="UniConnect Logo" className="h-full w-full rounded-full object-cover" />
-            </div>
-            <div>
-              <span className="text-xl font-black text-[#f7f8fb] block">UniConnect</span>
-              <span className="text-[10px] font-bold text-[#9eb1d7] uppercase ">
-                Student Network Portal
-              </span>
-            </div>
-          </div>
-
-          <div className="hidden md:flex items-center space-x-8">
-            <a href="#features" className="text-[#d8dce6] hover:text-[#8eb0ea] font-semibold text-sm">Features</a>
-            <a href="#faculties" className="text-[#d8dce6] hover:text-[#8eb0ea] font-semibold text-sm">Faculties</a>
-            <a href="#community" className="text-[#d8dce6] hover:text-[#8eb0ea] font-semibold text-sm">Community</a>
-          </div>
-
-          <div className="flex items-center space-x-3">
-            <Link to="/login" className="text-[#e4e8f1] hover:text-[#8eb0ea] font-bold text-sm px-4 py-2">
-              Login
-            </Link>
-            <Link
-              to="/register"
-              className="bg-[#2f5ea8] text-[#f8fbff] px-5 py-2.5 rounded-full font-bold text-sm hover:bg-[#3a6dbc] transition"
-            >
-              Sign Up
-            </Link>
-          </div>
-        </div>
-      </nav>
 
       {/* Hero */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 lg:py-24">

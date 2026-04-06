@@ -47,17 +47,21 @@ const Navbar = () => {
             </NavLink>
           </div>
 
-          {/* Admin Button + Hamburger */}
+          {/* Auth Buttons + Hamburger */}
           <div className="flex items-center gap-3">
-            <button
-              onClick={() => navigate("/admindashboard")}
-              className="hidden md:flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold text-white glow-btn"
+            <NavLink
+              to="/login"
+              className="hidden md:inline-flex items-center px-3 py-2 text-sm font-semibold text-slate-600 hover:text-indigo-600"
             >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" />
-              </svg>
-              Admin
-            </button>
+              Login
+            </NavLink>
+
+            <NavLink
+              to="/register"
+              className="hidden md:inline-flex items-center px-4 py-2 rounded-lg text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-700"
+            >
+              Sign Up
+            </NavLink>
 
             <button
               className="md:hidden p-2 rounded-lg text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 transition"
@@ -84,7 +88,8 @@ const Navbar = () => {
               { to: "/News-only", label: "News" },
               { to: "/ProjectFeed", label: "Projects" },
               { to: "/analysis", label: "Club&Event Analysis" },
-              { to: "/admindashboard", label: "Admin Dashboard" },
+                { to: "/login", label: "Login" },
+                { to: "/register", label: "Sign Up" },
             ].map(({ to, label }) => (
               <NavLink
                 key={to}
