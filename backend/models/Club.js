@@ -142,6 +142,11 @@ const clubSchema = new mongoose.Schema(
       default: [],
     },
 
+    logo: {
+  type: String,
+  default: "",
+},
+
     // ================= CONSTITUTION FILE =================
     constitution: {
       fileUrl: {

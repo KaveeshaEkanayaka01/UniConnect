@@ -2,8 +2,30 @@ import MentorProfile from "../models/MentorProfile.js";
 import MentorshipRequest from "../models/MentorshipRequest.js";
 import Club from "../models/Club.js";
 
-const normalizeArray = (arr = []) =>
-  [...new Set(arr.map((item) => String(item).trim().toLowerCase()).filter(Boolean))];
+const normalizeArray = (arr = []) => {
+  if (Array.isArray(arr)) {
+    return [
+      ...new Set(
+        arr
+          .map((item) => String(item || "").trim())
+          .filter(Boolean)
+      ),
+    ];
+  }
+
+  if (typeof arr === "string") {
+    return [
+      ...new Set(
+        arr
+          .split(",")
+          .map((item) => item.trim())
+          .filter(Boolean)
+      ),
+    ];
+  }
+
+  return [];
+};
 
 const levelMap = {
   Beginner: 1,
@@ -13,10 +35,18 @@ const levelMap = {
 };
 
 const calculateMatchScore = (studentData, mentorProfile) => {
-  const studentSkills = normalizeArray(studentData.studentSkills || []);
-  const studentInterests = normalizeArray(studentData.studentInterests || []);
-  const mentorSkills = normalizeArray(mentorProfile.skills || []);
-  const mentorInterests = normalizeArray(mentorProfile.interests || []);
+  const studentSkills = normalizeArray(studentData.studentSkills || []).map((item) =>
+    item.toLowerCase()
+  );
+  const studentInterests = normalizeArray(studentData.studentInterests || []).map(
+    (item) => item.toLowerCase()
+  );
+  const mentorSkills = normalizeArray(mentorProfile.skills || []).map((item) =>
+    item.toLowerCase()
+  );
+  const mentorInterests = normalizeArray(mentorProfile.interests || []).map((item) =>
+    item.toLowerCase()
+  );
 
   const commonSkills = studentSkills.filter((skill) =>
     mentorSkills.includes(skill)
@@ -42,8 +72,10 @@ const calculateMatchScore = (studentData, mentorProfile) => {
     levelScore = 0.5;
   }
 
-  const capacityScore =
-    mentorProfile.currentMentees < mentorProfile.maxMentees ? 1 : 0;
+  const currentMentees = Number(mentorProfile.currentMentees || 0);
+  const maxMentees = Number(mentorProfile.maxMentees || 0);
+
+  const capacityScore = currentMentees < maxMentees ? 1 : 0;
 
   const availabilityScore =
     mentorProfile.availability === "Available"
@@ -62,19 +94,81 @@ const calculateMatchScore = (studentData, mentorProfile) => {
   return Number(finalScore.toFixed(2));
 };
 
+const validateMentorProfileInput = ({
+  title,
+  bio,
+  skills,
+  interests,
+  expertiseLevel,
+  availability,
+  maxMentees,
+}) => {
+  const trimmedTitle = String(title || "").trim();
+  const trimmedBio = String(bio || "").trim();
+  const parsedSkills = normalizeArray(skills);
+  const parsedInterests = normalizeArray(interests);
+  const parsedMaxMentees = Number(maxMentees);
+
+  if (!trimmedTitle) {
+    return { isValid: false, message: "Title is required" };
+  }
+
+  if (trimmedTitle.length < 2) {
+    return { isValid: false, message: "Title must be at least 2 characters" };
+  }
+
+  if (!trimmedBio) {
+    return { isValid: false, message: "Bio is required" };
+  }
+
+  if (trimmedBio.length > 500) {
+    return { isValid: false, message: "Bio cannot exceed 500 characters" };
+  }
+
+  if (parsedSkills.length === 0) {
+    return { isValid: false, message: "At least one skill is required" };
+  }
+
+  if (parsedInterests.length === 0) {
+    return { isValid: false, message: "At least one interest is required" };
+  }
+
+  if (
+    expertiseLevel &&
+    !["Beginner", "Intermediate", "Advanced", "Expert"].includes(expertiseLevel)
+  ) {
+    return { isValid: false, message: "Invalid expertise level" };
+  }
+
+  if (
+    availability &&
+    !["Available", "Busy", "Unavailable"].includes(availability)
+  ) {
+    return { isValid: false, message: "Invalid availability" };
+  }
+
+  if (!Number.isFinite(parsedMaxMentees) || parsedMaxMentees < 1) {
+    return { isValid: false, message: "Max mentees must be at least 1" };
+  }
+
+  return {
+    isValid: true,
+    data: {
+      title: trimmedTitle,
+      bio: trimmedBio,
+      skills: parsedSkills,
+      interests: parsedInterests,
+      expertiseLevel: expertiseLevel || "Intermediate",
+      availability: availability || "Available",
+      maxMentees: parsedMaxMentees,
+    },
+  };
+};
+
 // Create mentor profile
 export const createMentorProfile = async (req, res) => {
   try {
     const { clubId } = req.params;
-    const {
-      title,
-      bio,
-      skills,
-      interests,
-      expertiseLevel,
-      availability,
-      maxMentees,
-    } = req.body;
 
     const club = await Club.findById(clubId);
     if (!club) {
@@ -92,26 +186,134 @@ export const createMentorProfile = async (req, res) => {
       });
     }
 
+    const validation = validateMentorProfileInput(req.body);
+    if (!validation.isValid) {
+      return res.status(400).json({ message: validation.message });
+    }
+
     const mentorProfile = await MentorProfile.create({
       club: clubId,
       mentor: req.user._id,
-      title: title || "",
-      bio: bio || "",
-      skills: Array.isArray(skills) ? skills : [],
-      interests: Array.isArray(interests) ? interests : [],
-      expertiseLevel: expertiseLevel || "Intermediate",
-      availability: availability || "Available",
-      maxMentees: maxMentees || 5,
+      ...validation.data,
     });
 
     const populated = await MentorProfile.findById(mentorProfile._id)
-      .populate("mentor", "name email profilePicture role")
+      .populate("mentor", "name fullName email profilePicture role")
       .populate("club", "name");
 
     return res.status(201).json(populated);
   } catch (error) {
     console.error("createMentorProfile error:", error);
     return res.status(500).json({ message: "Failed to create mentor profile" });
+  }
+};
+
+// Get my mentor profile
+export const getMyMentorProfile = async (req, res) => {
+  try {
+    const { clubId } = req.params;
+
+    const profile = await MentorProfile.findOne({
+      club: clubId,
+      mentor: req.user._id,
+    })
+      .populate("mentor", "name fullName email profilePicture role")
+      .populate("club", "name");
+
+    if (!profile) {
+      return res.status(200).json(null);
+    }
+
+    return res.status(200).json(profile);
+  } catch (error) {
+    console.error("getMyMentorProfile error:", error);
+    return res.status(500).json({ message: "Failed to fetch mentor profile" });
+  }
+};
+
+// Update my mentor profile
+export const updateMyMentorProfile = async (req, res) => {
+  try {
+    const { clubId } = req.params;
+
+    const mentorProfile = await MentorProfile.findOne({
+      club: clubId,
+      mentor: req.user._id,
+    });
+
+    if (!mentorProfile) {
+      return res.status(404).json({
+        message: "Mentor profile not found for this club",
+      });
+    }
+
+    const validation = validateMentorProfileInput(req.body);
+    if (!validation.isValid) {
+      return res.status(400).json({ message: validation.message });
+    }
+
+    mentorProfile.title = validation.data.title;
+    mentorProfile.bio = validation.data.bio;
+    mentorProfile.skills = validation.data.skills;
+    mentorProfile.interests = validation.data.interests;
+    mentorProfile.expertiseLevel = validation.data.expertiseLevel;
+    mentorProfile.availability = validation.data.availability;
+    mentorProfile.maxMentees = validation.data.maxMentees;
+
+    if (mentorProfile.currentMentees > mentorProfile.maxMentees) {
+      mentorProfile.currentMentees = mentorProfile.maxMentees;
+    }
+
+    await mentorProfile.save();
+
+    const populated = await MentorProfile.findById(mentorProfile._id)
+      .populate("mentor", "name fullName email profilePicture role")
+      .populate("club", "name");
+
+    return res.status(200).json(populated);
+  } catch (error) {
+    console.error("updateMyMentorProfile error:", error);
+    return res.status(500).json({ message: "Failed to update mentor profile" });
+  }
+};
+
+// Delete my mentor profile
+export const deleteMyMentorProfile = async (req, res) => {
+  try {
+    const { clubId } = req.params;
+
+    const mentorProfile = await MentorProfile.findOne({
+      club: clubId,
+      mentor: req.user._id,
+    });
+
+    if (!mentorProfile) {
+      return res.status(404).json({
+        message: "Mentor profile not found for this club",
+      });
+    }
+
+    const activeAcceptedRequests = await MentorshipRequest.countDocuments({
+      club: clubId,
+      mentor: req.user._id,
+      status: "ACCEPTED",
+    });
+
+    if (activeAcceptedRequests > 0) {
+      return res.status(400).json({
+        message:
+          "Cannot delete mentor profile while you have accepted mentorship requests",
+      });
+    }
+
+    await mentorProfile.deleteOne();
+
+    return res.status(200).json({
+      message: "Mentor profile deleted successfully",
+    });
+  } catch (error) {
+    console.error("deleteMyMentorProfile error:", error);
+    return res.status(500).json({ message: "Failed to delete mentor profile" });
   }
 };
 
@@ -124,7 +326,7 @@ export const getClubMentors = async (req, res) => {
       club: clubId,
       isActive: true,
     })
-      .populate("mentor", "name email profilePicture role")
+      .populate("mentor", "name fullName email profilePicture role")
       .sort({ createdAt: -1 });
 
     return res.status(200).json(mentors);
@@ -143,7 +345,7 @@ export const getRecommendedMentors = async (req, res) => {
     const mentors = await MentorProfile.find({
       club: clubId,
       isActive: true,
-    }).populate("mentor", "name email profilePicture role");
+    }).populate("mentor", "name fullName email profilePicture role");
 
     const ranked = mentors
       .map((mentorProfile) => ({
@@ -162,7 +364,9 @@ export const getRecommendedMentors = async (req, res) => {
     return res.status(200).json(ranked);
   } catch (error) {
     console.error("getRecommendedMentors error:", error);
-    return res.status(500).json({ message: "Failed to generate recommendations" });
+    return res
+      .status(500)
+      .json({ message: "Failed to generate recommendations" });
   }
 };
 
@@ -180,6 +384,11 @@ export const createMentorshipRequest = async (req, res) => {
 
     if (!mentorId) {
       return res.status(400).json({ message: "Mentor is required" });
+    }
+
+    const club = await Club.findById(clubId);
+    if (!club) {
+      return res.status(404).json({ message: "Club not found" });
     }
 
     const mentorProfile = await MentorProfile.findOne({
@@ -209,8 +418,15 @@ export const createMentorshipRequest = async (req, res) => {
       });
     }
 
+    const normalizedStudentSkills = normalizeArray(studentSkills);
+    const normalizedStudentInterests = normalizeArray(studentInterests);
+
     const matchScore = calculateMatchScore(
-      { studentSkills, studentInterests, studentLevel },
+      {
+        studentSkills: normalizedStudentSkills,
+        studentInterests: normalizedStudentInterests,
+        studentLevel,
+      },
       mentorProfile
     );
 
@@ -218,22 +434,24 @@ export const createMentorshipRequest = async (req, res) => {
       club: clubId,
       student: req.user._id,
       mentor: mentorId,
-      message: message || "",
-      studentSkills: Array.isArray(studentSkills) ? studentSkills : [],
-      studentInterests: Array.isArray(studentInterests) ? studentInterests : [],
+      message: String(message || "").trim(),
+      studentSkills: normalizedStudentSkills,
+      studentInterests: normalizedStudentInterests,
       studentLevel: studentLevel || "Beginner",
       matchScore,
     });
 
     const populated = await MentorshipRequest.findById(request._id)
-      .populate("student", "name email profilePicture")
-      .populate("mentor", "name email profilePicture")
+      .populate("student", "name fullName email profilePicture")
+      .populate("mentor", "name fullName email profilePicture")
       .populate("club", "name");
 
     return res.status(201).json(populated);
   } catch (error) {
     console.error("createMentorshipRequest error:", error);
-    return res.status(500).json({ message: "Failed to create mentorship request" });
+    return res
+      .status(500)
+      .json({ message: "Failed to create mentorship request" });
   }
 };
 
@@ -243,8 +461,8 @@ export const getMyMentorshipRequests = async (req, res) => {
     const requests = await MentorshipRequest.find({
       student: req.user._id,
     })
-      .populate("student", "name email profilePicture")
-      .populate("mentor", "name email profilePicture")
+      .populate("student", "name fullName email profilePicture")
+      .populate("mentor", "name fullName email profilePicture")
       .populate("club", "name")
       .sort({ createdAt: -1 });
 
@@ -255,14 +473,83 @@ export const getMyMentorshipRequests = async (req, res) => {
   }
 };
 
-// Requests received by mentor
+// Requests received by mentor OR visible to club managers / system admin
 export const getMentorRequests = async (req, res) => {
   try {
-    const requests = await MentorshipRequest.find({
+    const userId = String(req.user._id || "");
+    const userRole = String(req.user?.role || "").trim().toUpperCase();
+
+    let requests = [];
+
+    if (userRole === "SYSTEM_ADMIN") {
+      requests = await MentorshipRequest.find({})
+        .populate("student", "name fullName email profilePicture")
+        .populate("mentor", "name fullName email profilePicture")
+        .populate("club", "name")
+        .sort({ createdAt: -1 });
+
+      return res.status(200).json(requests);
+    }
+
+    const managedClubs = await Club.find({
+      $or: [
+        { createdBy: req.user._id },
+        { president: req.user._id },
+        { "members.user": req.user._id },
+      ],
+    }).select("_id members createdBy president");
+
+    const managedClubIds = [];
+    for (const club of managedClubs) {
+      const isPresident = String(club?.president || "") === userId;
+      const isCreator = String(club?.createdBy || "") === userId;
+
+      const matchedMember = Array.isArray(club?.members)
+        ? club.members.find((member) => String(member?.user) === userId)
+        : null;
+
+      const memberRole = String(matchedMember?.role || "")
+        .trim()
+        .toLowerCase();
+
+      const canManage =
+        isPresident ||
+        isCreator ||
+        [
+          "club_admin",
+          "president",
+          "vice_president",
+          "secretary",
+          "assistant_secretary",
+          "treasurer",
+          "assistant_treasurer",
+          "event_coordinator",
+          "project_coordinator",
+          "executive_committee_member",
+        ].includes(memberRole);
+
+      if (canManage) {
+        managedClubIds.push(club._id);
+      }
+    }
+
+    if (managedClubIds.length > 0) {
+      requests = await MentorshipRequest.find({
+        $or: [{ mentor: req.user._id }, { club: { $in: managedClubIds } }],
+      })
+        .populate("student", "name fullName email profilePicture")
+        .populate("mentor", "name fullName email profilePicture")
+        .populate("club", "name")
+        .sort({ createdAt: -1 });
+
+      return res.status(200).json(requests);
+    }
+
+    requests = await MentorshipRequest.find({
       mentor: req.user._id,
     })
-      .populate("student", "name email profilePicture")
-      .populate("mentor", "name email profilePicture")
+      .populate("student", "name fullName email profilePicture")
+      .populate("mentor", "name fullName email profilePicture")
       .populate("club", "name")
       .sort({ createdAt: -1 });
 
@@ -290,27 +577,61 @@ export const updateMentorshipRequestStatus = async (req, res) => {
 
     const isMentor = String(request.mentor) === String(req.user._id);
     const isStudent = String(request.student) === String(req.user._id);
+    const isSystemAdmin =
+      String(req.user?.role || "").trim().toUpperCase() === "SYSTEM_ADMIN";
 
-    if (!isMentor && !isStudent) {
+    if (!isMentor && !isStudent && !isSystemAdmin) {
       return res.status(403).json({ message: "Not authorized" });
     }
 
-    if (status === "ACCEPTED" && isMentor) {
+    const previousStatus = String(request.status || "").toUpperCase();
+
+    if (status === "ACCEPTED") {
+      if (!isMentor && !isSystemAdmin) {
+        return res
+          .status(403)
+          .json({ message: "Only the mentor can accept this request" });
+      }
+
+      if (previousStatus !== "ACCEPTED") {
+        const mentorProfile = await MentorProfile.findOne({
+          club: request.club,
+          mentor: request.mentor,
+          isActive: true,
+        });
+
+        if (!mentorProfile) {
+          return res.status(404).json({ message: "Mentor profile not found" });
+        }
+
+        const currentMentees = Number(mentorProfile.currentMentees || 0);
+        const maxMentees = Number(mentorProfile.maxMentees || 0);
+
+        if (currentMentees >= maxMentees) {
+          return res
+            .status(400)
+            .json({ message: "Mentor has reached max mentees" });
+        }
+
+        mentorProfile.currentMentees = currentMentees + 1;
+        await mentorProfile.save();
+      }
+    }
+
+    if (previousStatus === "ACCEPTED" && ["REJECTED", "CANCELLED"].includes(status)) {
       const mentorProfile = await MentorProfile.findOne({
         club: request.club,
         mentor: request.mentor,
+        isActive: true,
       });
 
-      if (!mentorProfile) {
-        return res.status(404).json({ message: "Mentor profile not found" });
+      if (mentorProfile) {
+        mentorProfile.currentMentees = Math.max(
+          0,
+          Number(mentorProfile.currentMentees || 0) - 1
+        );
+        await mentorProfile.save();
       }
-
-      if (mentorProfile.currentMentees >= mentorProfile.maxMentees) {
-        return res.status(400).json({ message: "Mentor has reached max mentees" });
-      }
-
-      mentorProfile.currentMentees += 1;
-      await mentorProfile.save();
     }
 
     request.status = status;
@@ -318,8 +639,8 @@ export const updateMentorshipRequestStatus = async (req, res) => {
     await request.save();
 
     const populated = await MentorshipRequest.findById(request._id)
-      .populate("student", "name email profilePicture")
-      .populate("mentor", "name email profilePicture")
+      .populate("student", "name fullName email profilePicture")
+      .populate("mentor", "name fullName email profilePicture")
       .populate("club", "name");
 
     return res.status(200).json(populated);

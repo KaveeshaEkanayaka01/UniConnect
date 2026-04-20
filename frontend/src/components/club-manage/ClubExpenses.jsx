@@ -1,9 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import {
   Wallet,
-  PlusCircle,
   Search,
-  Lock,
   CheckCircle2,
   XCircle,
   Paperclip,
@@ -49,7 +47,7 @@ const expenseCreatorRoles = [
   "assistant_treasurer",
   "event_coordinator",
   "project_coordinator",
-  "executive",
+  "executive_committee_member",
   "club_admin",
 ];
 
@@ -100,7 +98,7 @@ const ClubExpenses = ({ clubId, club, membership, permissions }) => {
   const membershipRole = normalizeText(membership?.role);
   const parentRole = normalizeText(membership?.parentRole);
 
-  const isSystemAdmin = userRole === "system_admin";
+  const isSystemAdmin = userRole.toUpperCase() === "SYSTEM_ADMIN";
 
   const canManageExpenses = useMemo(() => {
     if (permissions?.canManageClub) return true;
@@ -117,15 +115,18 @@ const ClubExpenses = ({ clubId, club, membership, permissions }) => {
       setLoading(true);
       setMessage("");
       const res = await getClubExpenses(clubId);
-      setExpenses(
-        Array.isArray(res?.data) ? res.data : Array.isArray(res) ? res : []
-      );
+
+      const expenseData = Array.isArray(res)
+        ? res
+        : Array.isArray(res?.data)
+        ? res.data
+        : [];
+
+      setExpenses(expenseData);
     } catch (error) {
       console.error("Error loading expenses:", error);
       setExpenses([]);
-      setMessage(
-        error?.response?.data?.message || "Failed to load expenses"
-      );
+      setMessage(error?.response?.data?.message || "Failed to load expenses");
     } finally {
       setLoading(false);
     }
@@ -155,21 +156,26 @@ const ClubExpenses = ({ clubId, club, membership, permissions }) => {
     );
   }, [expenses, search]);
 
-  const totalAmount = useMemo(() => {
-    return expenses.reduce((sum, item) => sum + Number(item.amount || 0), 0);
-  }, [expenses]);
+  const totalAmount = useMemo(
+    () => expenses.reduce((sum, item) => sum + Number(item.amount || 0), 0),
+    [expenses]
+  );
 
-  const approvedCount = useMemo(() => {
-    return expenses.filter(
-      (item) => normalizeText(item.status || "pending") === "approved"
-    ).length;
-  }, [expenses]);
+  const approvedCount = useMemo(
+    () =>
+      expenses.filter(
+        (item) => normalizeText(item.status || "pending") === "approved"
+      ).length,
+    [expenses]
+  );
 
-  const pendingCount = useMemo(() => {
-    return expenses.filter(
-      (item) => normalizeText(item.status || "pending") === "pending"
-    ).length;
-  }, [expenses]);
+  const pendingCount = useMemo(
+    () =>
+      expenses.filter(
+        (item) => normalizeText(item.status || "pending") === "pending"
+      ).length,
+    [expenses]
+  );
 
   const handleInputChange = (key, value) => {
     setForm((prev) => ({ ...prev, [key]: value }));
@@ -252,9 +258,7 @@ const ClubExpenses = ({ clubId, club, membership, permissions }) => {
     setErrors(validationErrors);
     setMessage("");
 
-    if (Object.keys(validationErrors).length > 0) {
-      return;
-    }
+    if (Object.keys(validationErrors).length > 0) return;
 
     try {
       setSubmitting(true);
@@ -353,16 +357,17 @@ const ClubExpenses = ({ clubId, club, membership, permissions }) => {
 
   return (
     <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-      <div className="bg-white rounded-3xl border border-slate-200 p-6 shadow-sm">
-        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 mb-5">
+      <div className="bg-white rounded-3xl border border-[#0B1E8A]/10 p-6 shadow-sm">
+        <div className="flex flex-col lg:flex-row justify-between gap-4 mb-5">
           <div>
             <div className="flex items-center gap-3">
-              <Wallet className="text-indigo-600" size={20} />
-              <h2 className="text-xl font-black text-slate-900">
+              <Wallet className="text-[#F36C21]" size={20} />
+              <h2 className="text-xl font-black text-[#0B1E8A]">
                 {club?.name ? `${club.name} Expenses` : "Expenses"}
               </h2>
             </div>
-            <p className="mt-2 text-sm text-slate-500">
+
+            <p className="mt-2 text-sm text-gray-600">
               {isSystemAdmin
                 ? "Review, approve, or reject submitted expenses."
                 : "Track and manage club expense records."}
@@ -372,142 +377,157 @@ const ClubExpenses = ({ clubId, club, membership, permissions }) => {
           <div className="relative w-full lg:w-80">
             <Search
               size={16}
-              className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
+              className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
             />
             <input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search expenses..."
-              className="w-full pl-9 pr-4 py-2.5 text-sm rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-200"
+              className="w-full pl-9 pr-4 py-2.5 text-sm rounded-xl border border-gray-300 focus:outline-none focus:ring-2 focus:ring-[#F36C21]"
             />
           </div>
         </div>
 
         {message && (
-          <div className="mb-4 rounded-xl bg-slate-100 px-4 py-3 text-sm text-slate-700">
+          <div className="mb-4 rounded-xl bg-[#F36C21]/10 text-[#F36C21] px-4 py-3 text-sm">
             {message}
           </div>
         )}
 
         <div className="mb-4 flex flex-wrap gap-3">
-          <span className="px-4 py-2 rounded-full bg-slate-100 text-slate-700 text-sm font-semibold">
+          <span className="px-4 py-2 rounded-full bg-[#0B1E8A]/5 text-[#0B1E8A] text-sm font-semibold">
             Records: {expenses.length}
           </span>
-          <span className="px-4 py-2 rounded-full bg-emerald-100 text-emerald-700 text-sm font-semibold">
-            Approved: {approvedCount}
-          </span>
-          <span className="px-4 py-2 rounded-full bg-amber-100 text-amber-700 text-sm font-semibold">
+          <span className="px-4 py-2 rounded-full bg-[#F36C21]/10 text-[#F36C21] text-sm font-semibold">
             Pending: {pendingCount}
           </span>
-          <span className="px-4 py-2 rounded-full bg-indigo-100 text-indigo-700 text-sm font-semibold">
+          <span className="px-4 py-2 rounded-full bg-[#0B1E8A]/10 text-[#0B1E8A] text-sm font-semibold">
+            Approved: {approvedCount}
+          </span>
+          <span className="px-4 py-2 rounded-full bg-[#0B1E8A]/5 text-[#0B1E8A] text-sm font-semibold">
             Total: Rs. {totalAmount.toLocaleString()}
           </span>
         </div>
 
         {loading ? (
-          <p className="text-slate-500">Loading expenses...</p>
+          <div className="text-gray-500">Loading expenses...</div>
         ) : filteredExpenses.length === 0 ? (
-          <p className="text-slate-500">No expenses found.</p>
+          <div className="rounded-2xl border border-dashed border-[#0B1E8A]/15 px-4 py-10 text-center text-gray-500">
+            No expense records found.
+          </div>
         ) : (
           <div className="space-y-4">
             {filteredExpenses.map((expense) => {
-              const normalizedStatus = normalizeText(expense.status || "pending");
-              const isPending = normalizedStatus === "pending";
+              const isPending = normalizeText(expense.status) === "pending";
               const isBusy = actionLoadingId === expense._id;
-              const receiptUrl = getReceiptUrl(expense.receiptUrl);
 
               return (
                 <div
                   key={expense._id}
-                  className="rounded-2xl border border-slate-200 p-4"
+                  className="rounded-2xl border border-[#0B1E8A]/10 p-4"
                 >
-                  <div className="flex items-start justify-between gap-4">
-                    <div>
-                      <h3 className="font-semibold text-slate-900">
-                        {expense.title || "Untitled Expense"}
-                      </h3>
-                      <p className="text-sm text-slate-500 mt-1">
+                  <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                    <div className="flex-1">
+                      <div className="flex flex-wrap items-center gap-3">
+                        <h3 className="text-lg font-bold text-[#0B1E8A]">
+                          {expense.title}
+                        </h3>
+
+                        <span
+                          className={`px-3 py-1 rounded-full text-xs font-semibold ${getStatusClass(
+                            expense.status
+                          )}`}
+                        >
+                          {expense.status || "pending"}
+                        </span>
+
+                        <span className="px-3 py-1 rounded-full text-xs font-semibold bg-[#0B1E8A]/5 text-[#0B1E8A]">
+                          {expense.category || "Other"}
+                        </span>
+                      </div>
+
+                      <p className="mt-2 text-sm text-gray-600">
                         {expense.description || "No description provided"}
                       </p>
-                      <p className="text-sm text-slate-600 mt-2">
-                        Category: {expense.category || "Other"}
-                      </p>
-                      {expense.vendor && (
-                        <p className="text-sm text-slate-600 mt-1">
-                          Vendor: {expense.vendor}
-                        </p>
-                      )}
 
-                      {receiptUrl && (
+                      <div className="mt-3 grid grid-cols-1 gap-3 md:grid-cols-3">
+                        <div className="rounded-xl bg-[#0B1E8A]/5 px-3 py-2">
+                          <p className="text-xs font-semibold text-gray-500">
+                            Amount
+                          </p>
+                          <p className="text-sm font-bold text-[#0B1E8A]">
+                            Rs. {Number(expense.amount || 0).toLocaleString()}
+                          </p>
+                        </div>
+
+                        <div className="rounded-xl bg-[#0B1E8A]/5 px-3 py-2">
+                          <p className="text-xs font-semibold text-gray-500">
+                            Vendor
+                          </p>
+                          <p className="text-sm font-bold text-[#0B1E8A]">
+                            {expense.vendor || "-"}
+                          </p>
+                        </div>
+
+                        <div className="rounded-xl bg-[#0B1E8A]/5 px-3 py-2">
+                          <p className="text-xs font-semibold text-gray-500">
+                            Payment
+                          </p>
+                          <p className="text-sm font-bold text-[#0B1E8A]">
+                            {expense.paymentMethod || "-"}
+                          </p>
+                        </div>
+                      </div>
+
+                      {expense.receiptUrl && (
                         <a
-                          href={receiptUrl}
+                          href={getReceiptUrl(expense.receiptUrl)}
                           target="_blank"
                           rel="noreferrer"
-                          className="mt-3 inline-flex items-center gap-2 text-sm font-semibold text-indigo-600 hover:text-indigo-700"
+                          className="mt-3 inline-flex items-center gap-2 text-sm font-semibold text-[#F36C21] hover:underline"
                         >
-                          <Paperclip size={14} />
+                          <Paperclip size={15} />
                           View Receipt
                         </a>
                       )}
                     </div>
 
-                    <div className="text-right">
-                      <p className="font-bold text-slate-900">
-                        Rs. {Number(expense.amount || 0).toLocaleString()}
-                      </p>
-                      <span
-                        className={`inline-flex mt-2 px-3 py-1 rounded-full text-xs font-semibold ${getStatusClass(
-                          expense.status
-                        )}`}
-                      >
-                        {expense.status || "pending"}
-                      </span>
-
-                      {!isSystemAdmin && canCreateExpenses && (
-                        <div className="mt-3">
+                    <div className="flex flex-col gap-3 lg:w-[220px]">
+                      {canApproveRejectExpenses && isPending && (
+                        <>
                           <button
-                            onClick={() => handleDeleteExpense(expense._id)}
-                            className="text-xs font-semibold text-rose-600 hover:text-rose-700"
+                            type="button"
+                            disabled={isBusy}
+                            onClick={() => handleApprove(expense._id)}
+                            className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#0B1E8A] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#08166f] disabled:opacity-60"
                           >
-                            Delete
+                            <CheckCircle2 size={16} />
+                            Approve
                           </button>
-                        </div>
+
+                          <button
+                            type="button"
+                            disabled={isBusy}
+                            onClick={() => handleReject(expense._id)}
+                            className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#F36C21] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#d85f1b] disabled:opacity-60"
+                          >
+                            <XCircle size={16} />
+                            Reject
+                          </button>
+                        </>
+                      )}
+
+                      {canCreateExpenses && (
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteExpense(expense._id)}
+                          className="rounded-xl border border-[#0B1E8A]/15 px-4 py-2.5 text-sm font-semibold text-[#0B1E8A] hover:bg-[#0B1E8A]/5"
+                        >
+                          Delete
+                        </button>
                       )}
                     </div>
                   </div>
-
-                  {expense.rejectionReason && (
-                    <div className="mt-3 rounded-xl bg-slate-50 px-4 py-3 text-sm text-slate-600 border border-slate-200">
-                      <span className="font-semibold text-slate-800">
-                        Rejection Reason:
-                      </span>{" "}
-                      {expense.rejectionReason}
-                    </div>
-                  )}
-
-                  {canApproveRejectExpenses && isPending && (
-                    <div className="mt-4 flex flex-wrap gap-3">
-                      <button
-                        type="button"
-                        disabled={isBusy}
-                        onClick={() => handleApprove(expense._id)}
-                        className="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-4 py-2.5 text-white font-semibold hover:bg-emerald-700 disabled:opacity-60"
-                      >
-                        <CheckCircle2 size={16} />
-                        {isBusy ? "Processing..." : "Approve"}
-                      </button>
-
-                      <button
-                        type="button"
-                        disabled={isBusy}
-                        onClick={() => handleReject(expense._id)}
-                        className="inline-flex items-center gap-2 rounded-xl bg-rose-600 px-4 py-2.5 text-white font-semibold hover:bg-rose-700 disabled:opacity-60"
-                      >
-                        <XCircle size={16} />
-                        {isBusy ? "Processing..." : "Reject"}
-                      </button>
-                    </div>
-                  )}
                 </div>
               );
             })}
@@ -516,67 +536,43 @@ const ClubExpenses = ({ clubId, club, membership, permissions }) => {
       </div>
 
       {canCreateExpenses && (
-        <div className="bg-white rounded-3xl border border-slate-200 p-6 shadow-sm">
-          <div className="flex items-center gap-3 mb-4">
-            <PlusCircle className="text-indigo-600" size={20} />
-            <h2 className="text-xl font-black text-slate-900">Create Expense</h2>
-          </div>
+        <div className="bg-white rounded-3xl border border-[#0B1E8A]/10 p-6 shadow-sm">
+          <h3 className="text-xl font-black text-[#0B1E8A] mb-4">
+            Create Expense
+          </h3>
 
           <form onSubmit={handleCreateExpense} className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">
-                Title
-              </label>
               <input
                 type="text"
                 value={form.title}
                 onChange={(e) => handleInputChange("title", e.target.value)}
-                className={`w-full rounded-xl border px-4 py-2.5 focus:outline-none focus:ring-2 ${
-                  errors.title
-                    ? "border-rose-300 focus:ring-rose-100"
-                    : "border-slate-200 focus:ring-indigo-200"
-                }`}
-                placeholder="Enter expense title"
+                placeholder="Expense title"
+                className="w-full rounded-xl border border-gray-300 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-[#F36C21]"
               />
               {errors.title && (
-                <p className="mt-1 text-sm text-rose-600">{errors.title}</p>
+                <p className="mt-1 text-sm text-red-600">{errors.title}</p>
               )}
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">
-                Amount
-              </label>
               <input
                 type="number"
-                min="1"
-                step="0.01"
                 value={form.amount}
                 onChange={(e) => handleInputChange("amount", e.target.value)}
-                className={`w-full rounded-xl border px-4 py-2.5 focus:outline-none focus:ring-2 ${
-                  errors.amount
-                    ? "border-rose-300 focus:ring-rose-100"
-                    : "border-slate-200 focus:ring-indigo-200"
-                }`}
-                placeholder="Enter expense amount"
+                placeholder="Amount"
+                className="w-full rounded-xl border border-gray-300 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-[#F36C21]"
               />
               {errors.amount && (
-                <p className="mt-1 text-sm text-rose-600">{errors.amount}</p>
+                <p className="mt-1 text-sm text-red-600">{errors.amount}</p>
               )}
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">
-                Category
-              </label>
               <select
                 value={form.category}
                 onChange={(e) => handleInputChange("category", e.target.value)}
-                className={`w-full rounded-xl border px-4 py-2.5 focus:outline-none focus:ring-2 ${
-                  errors.category
-                    ? "border-rose-300 focus:ring-rose-100"
-                    : "border-slate-200 focus:ring-indigo-200"
-                }`}
+                className="w-full rounded-xl border border-gray-300 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-[#F36C21]"
               >
                 {expenseCategories.map((category) => (
                   <option key={category} value={category}>
@@ -585,138 +581,85 @@ const ClubExpenses = ({ clubId, club, membership, permissions }) => {
                 ))}
               </select>
               {errors.category && (
-                <p className="mt-1 text-sm text-rose-600">{errors.category}</p>
+                <p className="mt-1 text-sm text-red-600">{errors.category}</p>
               )}
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">
-                Vendor
-              </label>
               <input
                 type="text"
                 value={form.vendor}
                 onChange={(e) => handleInputChange("vendor", e.target.value)}
-                className={`w-full rounded-xl border px-4 py-2.5 focus:outline-none focus:ring-2 ${
-                  errors.vendor
-                    ? "border-rose-300 focus:ring-rose-100"
-                    : "border-slate-200 focus:ring-indigo-200"
-                }`}
-                placeholder="Optional vendor name"
+                placeholder="Vendor"
+                className="w-full rounded-xl border border-gray-300 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-[#F36C21]"
               />
               {errors.vendor && (
-                <p className="mt-1 text-sm text-rose-600">{errors.vendor}</p>
+                <p className="mt-1 text-sm text-red-600">{errors.vendor}</p>
               )}
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">
-                Payment Method
-              </label>
               <select
                 value={form.paymentMethod}
                 onChange={(e) =>
                   handleInputChange("paymentMethod", e.target.value)
                 }
-                className={`w-full rounded-xl border px-4 py-2.5 focus:outline-none focus:ring-2 ${
-                  errors.paymentMethod
-                    ? "border-rose-300 focus:ring-rose-100"
-                    : "border-slate-200 focus:ring-indigo-200"
-                }`}
+                className="w-full rounded-xl border border-gray-300 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-[#F36C21]"
               >
-                <option value="">Select payment method</option>
-                {paymentMethods
-                  .filter((method) => method !== "")
-                  .map((method) => (
-                    <option key={method} value={method}>
-                      {method}
-                    </option>
-                  ))}
+                {paymentMethods.map((method) => (
+                  <option key={method || "empty"} value={method}>
+                    {method || "Select payment method"}
+                  </option>
+                ))}
               </select>
               {errors.paymentMethod && (
-                <p className="mt-1 text-sm text-rose-600">
+                <p className="mt-1 text-sm text-red-600">
                   {errors.paymentMethod}
                 </p>
               )}
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">
-                Receipt File
-              </label>
-              <input
-                type="file"
-                accept=".pdf,image/*"
+              <textarea
+                rows={4}
+                value={form.description}
                 onChange={(e) =>
-                  handleInputChange("receiptFile", e.target.files?.[0] || null)
+                  handleInputChange("description", e.target.value)
                 }
-                className={`w-full rounded-xl border px-4 py-2.5 focus:outline-none focus:ring-2 ${
-                  errors.receiptFile
-                    ? "border-rose-300 focus:ring-rose-100"
-                    : "border-slate-200 focus:ring-indigo-200"
-                }`}
+                placeholder="Description"
+                className="w-full rounded-xl border border-gray-300 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-[#F36C21]"
               />
-              {form.receiptFile && (
-                <p className="mt-1 text-xs text-slate-500">
-                  Selected: {form.receiptFile.name}
-                </p>
-              )}
-              {errors.receiptFile && (
-                <p className="mt-1 text-sm text-rose-600">
-                  {errors.receiptFile}
+              {errors.description && (
+                <p className="mt-1 text-sm text-red-600">
+                  {errors.description}
                 </p>
               )}
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">
-                Description
-              </label>
-              <textarea
-                rows="4"
-                value={form.description}
-                onChange={(e) => handleInputChange("description", e.target.value)}
-                className={`w-full rounded-xl border px-4 py-2.5 focus:outline-none focus:ring-2 ${
-                  errors.description
-                    ? "border-rose-300 focus:ring-rose-100"
-                    : "border-slate-200 focus:ring-indigo-200"
-                }`}
-                placeholder="Explain this expense"
+              <input
+                type="file"
+                accept=".pdf,.jpg,.jpeg,.png,.webp"
+                onChange={(e) =>
+                  handleInputChange("receiptFile", e.target.files?.[0] || null)
+                }
+                className="w-full rounded-xl border border-gray-300 px-4 py-3 focus:outline-none"
               />
-              {errors.description && (
-                <p className="mt-1 text-sm text-rose-600">{errors.description}</p>
+              {errors.receiptFile && (
+                <p className="mt-1 text-sm text-red-600">
+                  {errors.receiptFile}
+                </p>
               )}
             </div>
 
             <button
               type="submit"
               disabled={submitting}
-              className="inline-flex items-center gap-2 rounded-xl bg-indigo-600 px-5 py-3 text-white font-semibold hover:bg-indigo-700 disabled:opacity-60"
+              className="w-full rounded-xl bg-[#F36C21] px-4 py-3 text-sm font-semibold text-white hover:bg-[#d85f1b] disabled:opacity-60"
             >
-              <Wallet size={16} />
-              {submitting ? "Submitting..." : "Submit Expense"}
+              {submitting ? "Submitting..." : "Create Expense"}
             </button>
           </form>
-        </div>
-      )}
-
-      {!canCreateExpenses && !canApproveRejectExpenses && (
-        <div className="bg-white rounded-3xl border border-slate-200 p-6 shadow-sm">
-          <div className="flex items-center gap-2 mb-4">
-            <Lock className="text-amber-600" size={20} />
-            <h3 className="text-2xl font-black text-slate-900">
-              Expense Actions
-            </h3>
-          </div>
-
-          <p className="text-sm text-slate-500 mb-4">
-            You can view expenses, but you are not allowed to submit new ones for
-            this club.
-          </p>
-
-          <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
-            Only allowed club management roles can submit expenses.
-          </div>
         </div>
       )}
     </div>

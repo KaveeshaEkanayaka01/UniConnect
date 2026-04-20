@@ -1,32 +1,31 @@
 import API from "../components/Auth/axios";
 
-// ================= BUDGET SERVICES =================
+// Get budgets
 export const getClubBudgets = async (clubId) => {
   const res = await API.get(`/budgets/club/${clubId}`);
   return res.data;
 };
 
-export const createBudgetRequest = async (payload) => {
-  const res = await API.post("/budgets", payload);
+// Create budget
+export const createBudgetRequest = async (data) => {
+  const res = await API.post(`/budgets`, data);
   return res.data;
 };
 
-export const getAllBudgets = async () => {
-  const res = await API.get("/budgets/all");
+
+export const updateBudgetRequest = async (budgetId, data) => {
+  const res = await API.put(`/budgets/${budgetId}`, data);
   return res.data;
 };
 
-export const approveBudgetRequest = async (budgetId, payload) => {
-  const res = await API.put(`/budgets/${budgetId}/approve`, payload);
+// Approve
+export const approveBudgetRequest = async (budgetId) => {
+  const res = await API.put(`/budgets/${budgetId}/approve`);
   return res.data;
 };
 
-export const rejectBudgetRequest = async (budgetId, payload) => {
-  const res = await API.put(`/budgets/${budgetId}/reject`, payload);
-  return res.data;
-};
-
-export const deleteBudgetRequest = async (budgetId) => {
-  const res = await API.delete(`/budgets/${budgetId}`);
+// Reject
+export const rejectBudgetRequest = async (budgetId, data) => {
+  const res = await API.put(`/budgets/${budgetId}/reject`, data);
   return res.data;
 };

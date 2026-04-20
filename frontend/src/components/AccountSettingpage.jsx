@@ -60,103 +60,150 @@ const AccountSettingsPage  = () => {
     return <div className="max-w-3xl mx-auto p-6 text-gray-500">Loading account settings...</div>;
   }
 
-  return (
-    <div className="max-w-3xl mx-auto space-y-8 animate-in fade-in duration-500">
-      <h1 className="text-3xl font-black text-gray-900">Account Settings</h1>
+ return (
+  <div className="max-w-3xl mx-auto space-y-8 animate-in fade-in duration-500">
+    <h1 className="text-3xl font-black text-[#0a1e8c]">Account Settings</h1>
 
-      {error && (
-        <div className="rounded-2xl border border-rose-200 bg-rose-50 text-rose-700 px-4 py-3 text-sm font-medium">
-          {error}
-        </div>
-      )}
-
-      <div className="space-y-6">
-        <section className="bg-white p-8 rounded-3xl shadow-sm border border-gray-100">
-          <h3 className="text-xl font-bold mb-6 text-gray-800">Login & Security</h3>
-          <div className="space-y-6">
-            <div className="flex items-center justify-between py-4 border-b border-gray-50">
-              <div>
-                <p className="text-sm font-bold text-gray-400 uppercase tracking-widest mb-1">Account Holder</p>
-                <p className="font-bold text-gray-900">{profileData.fullName}</p>
-              </div>
-              <span className="px-3 py-1 text-xs font-black text-emerald-700 bg-emerald-50 border border-emerald-100 rounded-full">
-                Active
-              </span>
-            </div>
-
-            <div className="flex items-center justify-between py-4 border-b border-gray-50">
-              <div>
-                <p className="text-sm font-bold text-gray-400 uppercase tracking-widest mb-1">Email Address</p>
-                <p className="font-bold text-gray-900">{profileData.email}</p>
-              </div>
-              <span className="px-4 py-2 text-sm font-bold text-gray-500 border border-gray-100 rounded-xl bg-gray-50">Managed by Profile</span>
-            </div>
-            
-            <div className="flex items-center justify-between py-4 border-b border-gray-50">
-              <div>
-                <p className="text-sm font-bold text-gray-400 uppercase tracking-widest mb-1">Password</p>
-                <p className="font-bold text-gray-900">••••••••••••</p>
-              </div>
-              <Link to="/settings/password" className="px-4 py-2 text-sm font-bold text-indigo-600 border border-indigo-100 rounded-xl hover:bg-indigo-50 transition-colors">Change Password</Link>
-            </div>
-
-            <div className="grid sm:grid-cols-2 gap-4">
-              <div className="rounded-xl bg-gray-50 border border-gray-100 p-4">
-                <p className="text-[11px] font-black uppercase tracking-widest text-gray-400">Faculty</p>
-                <p className="font-bold text-gray-900 mt-1">{profileData.faculty}</p>
-              </div>
-              <div className="rounded-xl bg-gray-50 border border-gray-100 p-4">
-                <p className="text-[11px] font-black uppercase tracking-widest text-gray-400">Year of Study</p>
-                <p className="font-bold text-gray-900 mt-1">{profileData.yearOfStudy}</p>
-              </div>
-            </div>
-            <p className="text-xs text-gray-500">Last login: {profileData.lastLogin}</p>
-          </div>
-        </section>
-
-        <section className="bg-white p-8 rounded-3xl shadow-sm border border-gray-100">
-          <h3 className="text-xl font-bold mb-6 text-gray-800">Preferences</h3>
-          <div className="space-y-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <h4 className="font-bold text-gray-800">Email Notifications</h4>
-                <p className="text-sm text-gray-500">Receive weekly updates on clubs and events.</p>
-              </div>
-              <button 
-                onClick={() => setNotifications(!notifications)}
-                className={`w-14 h-8 rounded-full transition-all flex items-center px-1 ${notifications ? 'bg-indigo-600 justify-end' : 'bg-gray-200 justify-start'}`}
-              >
-                <div className="w-6 h-6 bg-white rounded-full shadow-md"></div>
-              </button>
-            </div>
-
-            <div className="flex items-center justify-between">
-              <div>
-                <h4 className="font-bold text-gray-800">Private Profile</h4>
-                <p className="text-sm text-gray-500">Hide your profile from non-club members.</p>
-              </div>
-              <button 
-                onClick={() => setPrivacy(!privacy)}
-                className={`w-14 h-8 rounded-full transition-all flex items-center px-1 ${privacy ? 'bg-indigo-600 justify-end' : 'bg-gray-200 justify-start'}`}
-              >
-                <div className="w-6 h-6 bg-white rounded-full shadow-md"></div>
-              </button>
-            </div>
-
-            <p className="text-xs text-gray-500">
-              Preferences are saved automatically on this device.
-            </p>
-          </div>
-        </section>
-
-        <section className="bg-white p-8 rounded-3xl shadow-sm border border-red-50">
-          <h3 className="text-xl font-bold mb-2 text-red-600">Danger Zone</h3>
-          <p className="text-sm text-gray-500 mb-6">Account deactivation is not available yet. Contact support for account removal requests.</p>
-          <button disabled className="px-6 py-2 bg-red-50 text-red-400 font-bold rounded-xl border border-red-100 cursor-not-allowed">Deactivate Account (Coming Soon)</button>
-        </section>
+    {error && (
+      <div className="rounded-2xl border border-red-200 bg-red-50 text-red-700 px-4 py-3 text-sm font-medium">
+        {error}
       </div>
+    )}
+
+    <div className="space-y-6">
+      <section className="bg-white p-8 rounded-3xl shadow-sm border border-[#0a1e8c]/20">
+        <h3 className="text-xl font-bold mb-6 text-[#0a1e8c]">Login & Security</h3>
+
+        <div className="space-y-6">
+          <div className="flex items-center justify-between py-4 border-b border-[#0a1e8c]/10">
+            <div>
+              <p className="text-sm font-bold text-[#4a5b86] uppercase tracking-widest mb-1">
+                Account Holder
+              </p>
+              <p className="font-bold text-[#0a1e8c]">{profileData.fullName}</p>
+            </div>
+            <span className="px-3 py-1 text-xs font-black text-[#f37021] bg-[#fff4ec] border border-[#f37021]/30 rounded-full">
+              Active
+            </span>
+          </div>
+
+          <div className="flex items-center justify-between py-4 border-b border-[#0a1e8c]/10">
+            <div>
+              <p className="text-sm font-bold text-[#4a5b86] uppercase tracking-widest mb-1">
+                Email Address
+              </p>
+              <p className="font-bold text-[#0a1e8c]">{profileData.email}</p>
+            </div>
+            <span className="px-4 py-2 text-sm font-bold text-[#4a5b86] border border-[#0a1e8c]/20 rounded-xl bg-[#f5f8ff]">
+              Managed by Profile
+            </span>
+          </div>
+
+          <div className="flex items-center justify-between py-4 border-b border-[#0a1e8c]/10">
+            <div>
+              <p className="text-sm font-bold text-[#4a5b86] uppercase tracking-widest mb-1">
+                Password
+              </p>
+              <p className="font-bold text-[#0a1e8c]">••••••••••••</p>
+            </div>
+            <Link
+              to="/settings/password"
+              className="px-4 py-2 text-sm font-bold text-[#f37021] border border-[#f37021]/40 rounded-xl hover:bg-[#fff4ec] transition-colors"
+            >
+              Change Password
+            </Link>
+          </div>
+
+          <div className="grid sm:grid-cols-2 gap-4">
+            <div className="rounded-xl bg-[#f5f8ff] border border-[#0a1e8c]/20 p-4">
+              <p className="text-[11px] font-black uppercase tracking-widest text-[#4a5b86]">
+                Faculty
+              </p>
+              <p className="font-bold text-[#0a1e8c] mt-1">{profileData.faculty}</p>
+            </div>
+
+            <div className="rounded-xl bg-[#f5f8ff] border border-[#0a1e8c]/20 p-4">
+              <p className="text-[11px] font-black uppercase tracking-widest text-[#4a5b86]">
+                Year of Study
+              </p>
+              <p className="font-bold text-[#0a1e8c] mt-1">{profileData.yearOfStudy}</p>
+            </div>
+          </div>
+
+          <p className="text-xs text-[#4a5b86]">
+            Last login: {profileData.lastLogin}
+          </p>
+        </div>
+      </section>
+
+      <section className="bg-white p-8 rounded-3xl shadow-sm border border-[#0a1e8c]/20">
+        <h3 className="text-xl font-bold mb-6 text-[#0a1e8c]">Preferences</h3>
+
+        <div className="space-y-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <h4 className="font-bold text-[#0a1e8c]">Email Notifications</h4>
+              <p className="text-sm text-[#4a5b86]">
+                Receive weekly updates on clubs and events.
+              </p>
+            </div>
+
+            <button
+              onClick={() => setNotifications(!notifications)}
+              className={`w-14 h-8 rounded-full transition-all flex items-center px-1 ${
+                notifications
+                  ? 'bg-[#f37021] justify-end'
+                  : 'bg-[#e6edff] justify-start'
+              }`}
+            >
+              <div className="w-6 h-6 bg-white rounded-full shadow-md"></div>
+            </button>
+          </div>
+
+          <div className="flex items-center justify-between">
+            <div>
+              <h4 className="font-bold text-[#0a1e8c]">Private Profile</h4>
+              <p className="text-sm text-[#4a5b86]">
+                Hide your profile from non-club members.
+              </p>
+            </div>
+
+            <button
+              onClick={() => setPrivacy(!privacy)}
+              className={`w-14 h-8 rounded-full transition-all flex items-center px-1 ${
+                privacy
+                  ? 'bg-[#f37021] justify-end'
+                  : 'bg-[#e6edff] justify-start'
+              }`}
+            >
+              <div className="w-6 h-6 bg-white rounded-full shadow-md"></div>
+            </button>
+          </div>
+
+          <p className="text-xs text-[#4a5b86]">
+            Preferences are saved automatically on this device.
+          </p>
+        </div>
+      </section>
+
+      <section className="bg-white p-8 rounded-3xl shadow-sm border border-[#f37021]/30">
+        <h3 className="text-xl font-bold mb-2 text-[#f37021]">Danger Zone</h3>
+
+        <p className="text-sm text-[#4a5b86] mb-6">
+          Account deactivation is not available yet. Contact support for account
+          removal requests.
+        </p>
+
+        <button
+          disabled
+          className="px-6 py-2 bg-[#fff4ec] text-[#f37021]/60 font-bold rounded-xl border border-[#f37021]/30 cursor-not-allowed"
+        >
+          Deactivate Account (Coming Soon)
+        </button>
+      </section>
     </div>
-  );
+  </div>
+);
 };
 
 export default AccountSettingsPage;

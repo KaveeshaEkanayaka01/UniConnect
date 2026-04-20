@@ -9,7 +9,7 @@ const ELECTION_POSITIONS = [
   "Assistant Secretary",
   "Treasurer",
   "Assistant Treasurer",
-  "Executive Committee Member",
+  "executive_committee_member",
   "Event Coordinator",
   "Project Coordinator",
   "Other",
@@ -37,7 +37,7 @@ const MANAGEMENT_ROLES = [
   "VICE_PRESIDENT",
   "SECRETARY",
   "TREASURER",
-  "EXECUTIVE",
+  "executive_committee_member",
   "ASSISTANT_SECRETARY",
   "ASSISTANT_TREASURER",
   "EVENT_COORDINATOR",
@@ -217,7 +217,7 @@ export default function Election({
   const clubMemberRole =
     dashboardMembershipRole || detectedMemberRole || normalizeRole("");
 
-  const isSystemAdmin = userRole === "SYSTEM_ADMIN";
+  const isSystemAdmin = userRole.toUpperCase() === "SYSTEM_ADMIN";
 
   const canCreateOrManageElections =
     permissions?.canManageClub === true ||
@@ -230,7 +230,12 @@ export default function Election({
     MEMBER_ROLES.includes(clubMemberRole) ||
     String(club?.status || "").toLowerCase() === "active";
 
-  const canVoteInElections = clubMemberRole === "MEMBER";
+  const canVoteInElections = [
+  "MEMBER",
+  "PRESIDENT",
+  "VICE_PRESIDENT",
+  "EXECUTIVE_COMMITTEE_MEMBER"
+].includes(clubMemberRole);
 
   const getTimeMin = (selectedDate) => {
     return selectedDate === todayDate ? currentTime : "";
@@ -629,105 +634,165 @@ export default function Election({
     );
   }
 
-  return (
-    <div className="space-y-6">
-      <div className="rounded-2xl border bg-white p-5 shadow-sm">
-        <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+return (
+  <div className="space-y-6">
+    <div className="bg-white rounded-3xl border border-[#d7e2f6] p-6 shadow-sm">
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+        <div>
+          <h2 className="text-2xl font-black text-[#1b2230]">Elections</h2>
+          <p className="mt-2 text-sm text-[#516072]">
+            Manage elections and voting activities.
+          </p>
+        </div>
+
+        {canCreateOrManageElections && (
+          <button
+            type="button"
+            onClick={() => {
+              if (showForm && !editingElectionId) {
+                resetForm();
+              } else {
+                setShowForm(true);
+                setEditingElectionId(null);
+                setForm(initialForm);
+                setFormErrors({});
+              }
+            }}
+            className="inline-flex items-center gap-2 rounded-xl bg-[#2f5ea8] px-5 py-2.5 text-sm font-semibold text-white hover:bg-[#3a6dbc]"
+          >
+            {showForm && !editingElectionId ? "Close Form" : "Create Election"}
+          </button>
+        )}
+      </div>
+
+      <div className="mt-6 grid grid-cols-1 gap-4 md:grid-cols-4">
+        <div className="rounded-2xl border border-[#d7e2f6] bg-[#eef4ff] p-4">
+          <p className="text-sm font-semibold text-[#516072]">Total</p>
+          <p className="mt-2 text-3xl font-black text-[#1b2230]">{summary.total}</p>
+        </div>
+
+        <div className="rounded-2xl border border-[#d7e2f6] bg-[#eef4ff] p-4">
+          <p className="text-sm font-semibold text-[#516072]">Upcoming</p>
+          <p className="mt-2 text-3xl font-black text-[#2f5ea8]">{summary.upcoming}</p>
+        </div>
+
+        <div className="rounded-2xl border border-[#d7e2f6] bg-[#eef4ff] p-4">
+          <p className="text-sm font-semibold text-[#516072]">Ongoing</p>
+          <p className="mt-2 text-3xl font-black text-[#f37021]">{summary.ongoing}</p>
+        </div>
+
+        <div className="rounded-2xl border border-[#d7e2f6] bg-[#eef4ff] p-4">
+          <p className="text-sm font-semibold text-[#516072]">Completed</p>
+          <p className="mt-2 text-3xl font-black text-[#1b2230]">{summary.completed}</p>
+        </div>
+      </div>
+
+      <div className="mt-6 grid grid-cols-1 gap-4 lg:grid-cols-3">
+        <div className="lg:col-span-1">
+          <input
+            type="text"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            placeholder="Search elections..."
+            className="w-full rounded-xl border border-[#d7e2f6] bg-white px-4 py-3 text-sm text-[#1b2230] outline-none focus:ring-2 focus:ring-[#2f5ea8]"
+          />
+        </div>
+
+        <div>
+          <select
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+            className="w-full rounded-xl border border-[#d7e2f6] bg-white px-4 py-3 text-sm text-[#1b2230] outline-none focus:ring-2 focus:ring-[#2f5ea8]"
+          >
+            <option value="all">All Statuses</option>
+            <option value="upcoming">Upcoming</option>
+            <option value="ongoing">Ongoing</option>
+            <option value="completed">Completed</option>
+            <option value="cancelled">Cancelled</option>
+          </select>
+        </div>
+
+        <div>
+          <select
+            value={positionFilter}
+            onChange={(e) => setPositionFilter(e.target.value)}
+            className="w-full rounded-xl border border-[#d7e2f6] bg-white px-4 py-3 text-sm text-[#1b2230] outline-none focus:ring-2 focus:ring-[#2f5ea8]"
+          >
+            <option value="all">All Positions</option>
+            {ELECTION_POSITIONS.map((position) => (
+              <option key={position} value={position}>
+                {position}
+              </option>
+            ))}
+          </select>
+        </div>
+      </div>
+    </div>
+
+    {canCreateOrManageElections && showForm && (
+      <div className="rounded-3xl border border-[#d7e2f6] bg-white p-6 shadow-sm">
+        <div className="mb-5 flex items-center justify-between gap-4">
           <div>
-            <h2 className="text-2xl font-bold text-gray-800">Club Elections</h2>
-            <p className="text-sm text-gray-500">
-              View and manage election schedules and positions for this club.
-            </p>
-            <p className="mt-1 text-xs text-gray-400">
-              Membership role: {clubMemberRole || userRole || "N/A"}
+            <h3 className="text-xl font-black text-[#1b2230]">
+              {editingElectionId ? "Edit Election" : "Create Election"}
+            </h3>
+            <p className="mt-1 text-sm text-[#516072]">
+              Set nomination and voting dates, position, candidates, and eligibility.
             </p>
           </div>
 
-          {canCreateOrManageElections && (
-            <button
-              onClick={() => {
-                if (showForm && editingElectionId) {
-                  resetForm();
-                } else {
-                  setShowForm((prev) => !prev);
-                  if (showForm) resetForm();
-                }
-              }}
-              className="rounded-xl bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
-            >
-              {showForm
-                ? editingElectionId
-                  ? "Cancel Edit"
-                  : "Close Form"
-                : "Add Election"}
-            </button>
-          )}
-        </div>
-      </div>
-
-      <div className="grid gap-4 md:grid-cols-4">
-        <div className="rounded-2xl border bg-white p-4 shadow-sm">
-          <p className="text-sm text-gray-500">Total Elections</p>
-          <h3 className="mt-2 text-xl font-bold text-gray-800">
-            {summary.total}
-          </h3>
+          <button
+            type="button"
+            onClick={resetForm}
+            className="rounded-xl border border-[#d7e2f6] px-4 py-2 text-sm font-semibold text-[#516072] hover:bg-[#eef4ff]"
+          >
+            Cancel
+          </button>
         </div>
 
-        <div className="rounded-2xl border bg-white p-4 shadow-sm">
-          <p className="text-sm text-gray-500">Upcoming</p>
-          <h3 className="mt-2 text-xl font-bold text-gray-800">
-            {summary.upcoming}
-          </h3>
-        </div>
-
-        <div className="rounded-2xl border bg-white p-4 shadow-sm">
-          <p className="text-sm text-gray-500">Ongoing</p>
-          <h3 className="mt-2 text-xl font-bold text-gray-800">
-            {summary.ongoing}
-          </h3>
-        </div>
-
-        <div className="rounded-2xl border bg-white p-4 shadow-sm">
-          <p className="text-sm text-gray-500">Completed</p>
-          <h3 className="mt-2 text-xl font-bold text-gray-800">
-            {summary.completed}
-          </h3>
-        </div>
-      </div>
-
-      {showForm && canCreateOrManageElections && (
-        <div className="rounded-2xl border bg-white p-5 shadow-sm">
-          <h3 className="mb-4 text-lg font-semibold text-gray-800">
-            {editingElectionId ? "Update Election" : "Create Election"}
-          </h3>
-
-          <form onSubmit={handleSubmit} className="grid gap-4 md:grid-cols-2">
-            <div>
-              <label className="mb-1 block text-sm font-medium text-gray-700">
-                Election Title *
+        <form onSubmit={handleSubmit} className="space-y-5">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+            <div className="md:col-span-2">
+              <label className="mb-1.5 block text-sm font-semibold text-[#516072]">
+                Title
               </label>
               <input
                 type="text"
                 name="title"
                 value={form.title}
                 onChange={handleChange}
-                placeholder="Enter election title"
-                className="w-full rounded-xl border px-3 py-2 outline-none focus:border-blue-500"
+                className="w-full rounded-xl border border-[#d7e2f6] px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-[#2f5ea8]"
               />
               {formErrors.title && (
                 <p className="mt-1 text-sm text-red-600">{formErrors.title}</p>
               )}
             </div>
 
+            <div className="md:col-span-2">
+              <label className="mb-1.5 block text-sm font-semibold text-[#516072]">
+                Description
+              </label>
+              <textarea
+                name="description"
+                value={form.description}
+                onChange={handleChange}
+                rows="4"
+                className="w-full rounded-xl border border-[#d7e2f6] px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-[#2f5ea8]"
+              />
+              {formErrors.description && (
+                <p className="mt-1 text-sm text-red-600">{formErrors.description}</p>
+              )}
+            </div>
+
             <div>
-              <label className="mb-1 block text-sm font-medium text-gray-700">
-                Position *
+              <label className="mb-1.5 block text-sm font-semibold text-[#516072]">
+                Position
               </label>
               <select
                 name="position"
                 value={form.position}
                 onChange={handleChange}
-                className="w-full rounded-xl border px-3 py-2 outline-none focus:border-blue-500"
+                className="w-full rounded-xl border border-[#d7e2f6] px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-[#2f5ea8]"
               >
                 <option value="">Select position</option>
                 {ELECTION_POSITIONS.map((position) => (
@@ -737,34 +802,30 @@ export default function Election({
                 ))}
               </select>
               {formErrors.position && (
-                <p className="mt-1 text-sm text-red-600">
-                  {formErrors.position}
-                </p>
-              )}
-            </div>
-
-            <div className="md:col-span-2">
-              <label className="mb-1 block text-sm font-medium text-gray-700">
-                Description *
-              </label>
-              <textarea
-                name="description"
-                value={form.description}
-                onChange={handleChange}
-                rows={4}
-                placeholder="Enter election description"
-                className="w-full rounded-xl border px-3 py-2 outline-none focus:border-blue-500"
-              />
-              {formErrors.description && (
-                <p className="mt-1 text-sm text-red-600">
-                  {formErrors.description}
-                </p>
+                <p className="mt-1 text-sm text-red-600">{formErrors.position}</p>
               )}
             </div>
 
             <div>
-              <label className="mb-1 block text-sm font-medium text-gray-700">
-                Nomination Start Date *
+              <label className="mb-1.5 block text-sm font-semibold text-[#516072]">
+                Max Candidates
+              </label>
+              <input
+                type="number"
+                min="1"
+                name="maxCandidates"
+                value={form.maxCandidates}
+                onChange={handleChange}
+                className="w-full rounded-xl border border-[#d7e2f6] px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-[#2f5ea8]"
+              />
+              {formErrors.maxCandidates && (
+                <p className="mt-1 text-sm text-red-600">{formErrors.maxCandidates}</p>
+              )}
+            </div>
+
+            <div>
+              <label className="mb-1.5 block text-sm font-semibold text-[#516072]">
+                Nomination Start Date
               </label>
               <input
                 type="date"
@@ -772,18 +833,16 @@ export default function Election({
                 value={form.nominationStartDate}
                 onChange={handleChange}
                 min={todayDate}
-                className="w-full rounded-xl border px-3 py-2 outline-none focus:border-blue-500"
+                className="w-full rounded-xl border border-[#d7e2f6] px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-[#2f5ea8]"
               />
               {formErrors.nominationStartDate && (
-                <p className="mt-1 text-sm text-red-600">
-                  {formErrors.nominationStartDate}
-                </p>
+                <p className="mt-1 text-sm text-red-600">{formErrors.nominationStartDate}</p>
               )}
             </div>
 
             <div>
-              <label className="mb-1 block text-sm font-medium text-gray-700">
-                Nomination Start Time *
+              <label className="mb-1.5 block text-sm font-semibold text-[#516072]">
+                Nomination Start Time
               </label>
               <input
                 type="time"
@@ -791,18 +850,16 @@ export default function Election({
                 value={form.nominationStartTime}
                 onChange={handleChange}
                 min={getTimeMin(form.nominationStartDate)}
-                className="w-full rounded-xl border px-3 py-2 outline-none focus:border-blue-500"
+                className="w-full rounded-xl border border-[#d7e2f6] px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-[#2f5ea8]"
               />
               {formErrors.nominationStartTime && (
-                <p className="mt-1 text-sm text-red-600">
-                  {formErrors.nominationStartTime}
-                </p>
+                <p className="mt-1 text-sm text-red-600">{formErrors.nominationStartTime}</p>
               )}
             </div>
 
             <div>
-              <label className="mb-1 block text-sm font-medium text-gray-700">
-                Nomination End Date *
+              <label className="mb-1.5 block text-sm font-semibold text-[#516072]">
+                Nomination End Date
               </label>
               <input
                 type="date"
@@ -810,36 +867,32 @@ export default function Election({
                 value={form.nominationEndDate}
                 onChange={handleChange}
                 min={form.nominationStartDate || todayDate}
-                className="w-full rounded-xl border px-3 py-2 outline-none focus:border-blue-500"
+                className="w-full rounded-xl border border-[#d7e2f6] px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-[#2f5ea8]"
               />
               {formErrors.nominationEndDate && (
-                <p className="mt-1 text-sm text-red-600">
-                  {formErrors.nominationEndDate}
-                </p>
+                <p className="mt-1 text-sm text-red-600">{formErrors.nominationEndDate}</p>
               )}
             </div>
 
             <div>
-              <label className="mb-1 block text-sm font-medium text-gray-700">
-                Nomination End Time *
+              <label className="mb-1.5 block text-sm font-semibold text-[#516072]">
+                Nomination End Time
               </label>
               <input
                 type="time"
                 name="nominationEndTime"
                 value={form.nominationEndTime}
                 onChange={handleChange}
-                className="w-full rounded-xl border px-3 py-2 outline-none focus:border-blue-500"
+                className="w-full rounded-xl border border-[#d7e2f6] px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-[#2f5ea8]"
               />
               {formErrors.nominationEndTime && (
-                <p className="mt-1 text-sm text-red-600">
-                  {formErrors.nominationEndTime}
-                </p>
+                <p className="mt-1 text-sm text-red-600">{formErrors.nominationEndTime}</p>
               )}
             </div>
 
             <div>
-              <label className="mb-1 block text-sm font-medium text-gray-700">
-                Voting Start Date *
+              <label className="mb-1.5 block text-sm font-semibold text-[#516072]">
+                Voting Start Date
               </label>
               <input
                 type="date"
@@ -847,36 +900,32 @@ export default function Election({
                 value={form.votingStartDate}
                 onChange={handleChange}
                 min={form.nominationEndDate || todayDate}
-                className="w-full rounded-xl border px-3 py-2 outline-none focus:border-blue-500"
+                className="w-full rounded-xl border border-[#d7e2f6] px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-[#2f5ea8]"
               />
               {formErrors.votingStartDate && (
-                <p className="mt-1 text-sm text-red-600">
-                  {formErrors.votingStartDate}
-                </p>
+                <p className="mt-1 text-sm text-red-600">{formErrors.votingStartDate}</p>
               )}
             </div>
 
             <div>
-              <label className="mb-1 block text-sm font-medium text-gray-700">
-                Voting Start Time *
+              <label className="mb-1.5 block text-sm font-semibold text-[#516072]">
+                Voting Start Time
               </label>
               <input
                 type="time"
                 name="votingStartTime"
                 value={form.votingStartTime}
                 onChange={handleChange}
-                className="w-full rounded-xl border px-3 py-2 outline-none focus:border-blue-500"
+                className="w-full rounded-xl border border-[#d7e2f6] px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-[#2f5ea8]"
               />
               {formErrors.votingStartTime && (
-                <p className="mt-1 text-sm text-red-600">
-                  {formErrors.votingStartTime}
-                </p>
+                <p className="mt-1 text-sm text-red-600">{formErrors.votingStartTime}</p>
               )}
             </div>
 
             <div>
-              <label className="mb-1 block text-sm font-medium text-gray-700">
-                Voting End Date *
+              <label className="mb-1.5 block text-sm font-semibold text-[#516072]">
+                Voting End Date
               </label>
               <input
                 type="date"
@@ -884,319 +933,244 @@ export default function Election({
                 value={form.votingEndDate}
                 onChange={handleChange}
                 min={form.votingStartDate || todayDate}
-                className="w-full rounded-xl border px-3 py-2 outline-none focus:border-blue-500"
+                className="w-full rounded-xl border border-[#d7e2f6] px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-[#2f5ea8]"
               />
               {formErrors.votingEndDate && (
-                <p className="mt-1 text-sm text-red-600">
-                  {formErrors.votingEndDate}
-                </p>
+                <p className="mt-1 text-sm text-red-600">{formErrors.votingEndDate}</p>
               )}
             </div>
 
             <div>
-              <label className="mb-1 block text-sm font-medium text-gray-700">
-                Voting End Time *
+              <label className="mb-1.5 block text-sm font-semibold text-[#516072]">
+                Voting End Time
               </label>
               <input
                 type="time"
                 name="votingEndTime"
                 value={form.votingEndTime}
                 onChange={handleChange}
-                className="w-full rounded-xl border px-3 py-2 outline-none focus:border-blue-500"
+                className="w-full rounded-xl border border-[#d7e2f6] px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-[#2f5ea8]"
               />
               {formErrors.votingEndTime && (
-                <p className="mt-1 text-sm text-red-600">
-                  {formErrors.votingEndTime}
-                </p>
-              )}
-            </div>
-
-            <div>
-              <label className="mb-1 block text-sm font-medium text-gray-700">
-                Eligibility
-              </label>
-              <input
-                type="text"
-                name="eligibility"
-                value={form.eligibility}
-                onChange={handleChange}
-                placeholder="Optional eligibility criteria"
-                className="w-full rounded-xl border px-3 py-2 outline-none focus:border-blue-500"
-              />
-              {formErrors.eligibility && (
-                <p className="mt-1 text-sm text-red-600">
-                  {formErrors.eligibility}
-                </p>
-              )}
-            </div>
-
-            <div>
-              <label className="mb-1 block text-sm font-medium text-gray-700">
-                Max Candidates
-              </label>
-              <input
-                type="number"
-                name="maxCandidates"
-                value={form.maxCandidates}
-                onChange={handleChange}
-                min="1"
-                placeholder="Optional max candidate count"
-                className="w-full rounded-xl border px-3 py-2 outline-none focus:border-blue-500"
-              />
-              {formErrors.maxCandidates && (
-                <p className="mt-1 text-sm text-red-600">
-                  {formErrors.maxCandidates}
-                </p>
+                <p className="mt-1 text-sm text-red-600">{formErrors.votingEndTime}</p>
               )}
             </div>
 
             <div className="md:col-span-2">
-              <div className="mb-2 flex items-center justify-between">
-                <label className="block text-sm font-medium text-gray-700">
-                  Candidates *
-                </label>
-                <button
-                  type="button"
-                  onClick={addCandidateField}
-                  className="rounded-lg border px-3 py-1.5 text-sm font-medium text-blue-600 hover:bg-blue-50"
-                >
-                  Add Candidate
-                </button>
-              </div>
-
-              <div className="space-y-3">
-                {form.candidates.map((candidate, index) => (
-                  <div key={index} className="flex gap-2">
-                    <input
-                      type="text"
-                      value={candidate}
-                      onChange={(e) =>
-                        handleCandidateChange(index, e.target.value)
-                      }
-                      placeholder={`Candidate ${index + 1}`}
-                      className="w-full rounded-xl border px-3 py-2 outline-none focus:border-blue-500"
-                    />
-                    {form.candidates.length > 1 && (
-                      <button
-                        type="button"
-                        onClick={() => removeCandidateField(index)}
-                        className="rounded-xl border border-red-200 px-3 py-2 text-sm font-medium text-red-600 hover:bg-red-50"
-                      >
-                        Remove
-                      </button>
-                    )}
-                  </div>
-                ))}
-              </div>
-
-              {formErrors.candidates && (
-                <p className="mt-1 text-sm text-red-600">
-                  {formErrors.candidates}
-                </p>
+              <label className="mb-1.5 block text-sm font-semibold text-[#516072]">
+                Eligibility
+              </label>
+              <textarea
+                name="eligibility"
+                value={form.eligibility}
+                onChange={handleChange}
+                rows="3"
+                className="w-full rounded-xl border border-[#d7e2f6] px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-[#2f5ea8]"
+              />
+              {formErrors.eligibility && (
+                <p className="mt-1 text-sm text-red-600">{formErrors.eligibility}</p>
               )}
             </div>
+          </div>
 
-            <div className="md:col-span-2 flex flex-wrap gap-3">
-              <button
-                type="submit"
-                disabled={submitting}
-                className="rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-60"
-              >
-                {submitting
-                  ? editingElectionId
-                    ? "Updating..."
-                    : "Creating..."
-                  : editingElectionId
-                  ? "Update Election"
-                  : "Create Election"}
-              </button>
-
+          <div>
+            <div className="mb-2 flex items-center justify-between">
+              <label className="block text-sm font-semibold text-[#516072]">
+                Candidates
+              </label>
               <button
                 type="button"
-                onClick={resetForm}
-                className="rounded-xl border px-5 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                onClick={addCandidateField}
+                className="rounded-xl border border-[#d7e2f6] px-3 py-1.5 text-sm font-semibold text-[#2f5ea8] hover:bg-[#eef4ff]"
               >
-                Cancel
+                Add Candidate
               </button>
             </div>
-          </form>
-        </div>
-      )}
 
-      <div className="rounded-2xl border bg-white p-5 shadow-sm">
-        <div className="mb-4 grid gap-3 md:grid-cols-3">
-          <input
-            type="text"
-            placeholder="Search elections..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="rounded-xl border px-3 py-2 outline-none focus:border-blue-500"
-          />
+            <div className="space-y-3">
+              {form.candidates.map((candidate, index) => (
+                <div key={index} className="flex gap-3">
+                  <input
+                    type="text"
+                    value={candidate}
+                    onChange={(e) => handleCandidateChange(index, e.target.value)}
+                    placeholder={`Candidate ${index + 1}`}
+                    className="flex-1 rounded-xl border border-[#d7e2f6] px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-[#2f5ea8]"
+                  />
+                  {form.candidates.length > 1 && (
+                    <button
+                      type="button"
+                      onClick={() => removeCandidateField(index)}
+                      className="rounded-xl bg-[#f37021] px-4 py-2 text-sm font-semibold text-white hover:bg-[#d85f1b]"
+                    >
+                      Remove
+                    </button>
+                  )}
+                </div>
+              ))}
+            </div>
 
-          <select
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-            className="rounded-xl border px-3 py-2 outline-none focus:border-blue-500"
-          >
-            <option value="all">All statuses</option>
-            <option value="upcoming">Upcoming</option>
-            <option value="ongoing">Ongoing</option>
-            <option value="completed">Completed</option>
-            <option value="cancelled">Cancelled</option>
-          </select>
-
-          <select
-            value={positionFilter}
-            onChange={(e) => setPositionFilter(e.target.value)}
-            className="rounded-xl border px-3 py-2 outline-none focus:border-blue-500"
-          >
-            <option value="all">All positions</option>
-            {ELECTION_POSITIONS.map((position) => (
-              <option key={position} value={position}>
-                {position}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        {filteredElections.length === 0 ? (
-          <div className="rounded-2xl border border-dashed p-6 text-center text-gray-500">
-            No elections found.
+            {formErrors.candidates && (
+              <p className="mt-1 text-sm text-red-600">{formErrors.candidates}</p>
+            )}
           </div>
-        ) : (
-          <div className="space-y-4">
-            {filteredElections.map((election) => {
-              const computedStatus = getElectionStatus(election);
 
-              return (
-                <div
-                  key={election._id}
-                  className="rounded-2xl border p-5 shadow-sm transition hover:shadow-md"
-                >
-                  <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
-                    <div className="flex-1">
-                      <h3 className="text-lg font-semibold text-gray-800">
-                        {election.title || "Untitled Election"}
-                      </h3>
+          <div className="flex justify-end gap-3 pt-2">
+            <button
+              type="button"
+              onClick={resetForm}
+              className="rounded-xl border border-[#d7e2f6] px-5 py-2.5 text-sm font-semibold text-[#516072] hover:bg-[#eef4ff]"
+            >
+              Cancel
+            </button>
 
-                      <p className="mt-1 text-sm font-medium text-blue-600">
-                        {election.position || "Position not specified"}
+            <button
+              type="submit"
+              disabled={submitting}
+              className="rounded-xl bg-[#2f5ea8] px-5 py-2.5 text-sm font-semibold text-white hover:bg-[#3a6dbc] disabled:opacity-60"
+            >
+              {submitting
+                ? editingElectionId
+                  ? "Updating..."
+                  : "Creating..."
+                : editingElectionId
+                ? "Update Election"
+                : "Create Election"}
+            </button>
+          </div>
+        </form>
+      </div>
+    )}
+
+    {filteredElections.length === 0 ? (
+      <div className="rounded-3xl border border-[#d7e2f6] bg-white p-6 text-center shadow-sm">
+        <p className="text-sm text-[#516072]">No elections found.</p>
+      </div>
+    ) : (
+      <div className="space-y-4">
+        {filteredElections.map((election) => {
+          const computedStatus = getElectionStatus(election);
+
+          return (
+            <div
+              key={election._id}
+              className="rounded-3xl border border-[#d7e2f6] bg-white p-5 shadow-sm"
+            >
+              <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                <div className="flex-1">
+                  <div className="flex flex-wrap items-center gap-3">
+                    <h3 className="text-lg font-black text-[#1b2230]">
+                      {election.title}
+                    </h3>
+                    <span className="rounded-full bg-[#eef4ff] px-3 py-1 text-xs font-semibold text-[#2f5ea8]">
+                      {computedStatus}
+                    </span>
+                    <span className="rounded-full bg-[#fff4ec] px-3 py-1 text-xs font-semibold text-[#f37021]">
+                      {election.position}
+                    </span>
+                  </div>
+
+                  <p className="mt-2 text-sm text-[#516072]">
+                    {election.description}
+                  </p>
+
+                  <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-2">
+                    <div className="rounded-2xl bg-[#eef4ff] p-3">
+                      <p className="text-xs font-semibold uppercase tracking-wide text-[#2f5ea8]">
+                        Nomination
                       </p>
-
-                      <p className="mt-2 text-sm text-gray-600">
-                        {election.description || "No description provided."}
+                      <p className="mt-1 text-sm text-[#1b2230]">
+                        {formatDateTime(election.nominationStartDate)}
                       </p>
-
-                      <div className="mt-4 grid gap-2 text-sm text-gray-500 md:grid-cols-2">
-                        <p>
-                          <span className="font-medium text-gray-700">
-                            Nominations:
-                          </span>{" "}
-                          {formatDateTime(election.nominationStartDate)} -{" "}
-                          {formatDateTime(election.nominationEndDate)}
-                        </p>
-                        <p>
-                          <span className="font-medium text-gray-700">
-                            Voting:
-                          </span>{" "}
-                          {formatDateTime(election.votingStartDate)} -{" "}
-                          {formatDateTime(election.votingEndDate)}
-                        </p>
-                        <p>
-                          <span className="font-medium text-gray-700">
-                            Eligibility:
-                          </span>{" "}
-                          {election.eligibility || "Not specified"}
-                        </p>
-                        <p>
-                          <span className="font-medium text-gray-700">
-                            Candidates:
-                          </span>{" "}
-                          {Array.isArray(election.candidates)
-                            ? election.candidates.length
-                            : 0}
-                        </p>
-                      </div>
+                      <p className="mt-1 text-sm text-[#1b2230]">
+                        to {formatDateTime(election.nominationEndDate)}
+                      </p>
                     </div>
 
-                    <div className="flex flex-col gap-2 md:items-end">
-                      <span
-                        className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${
-                          computedStatus === "upcoming"
-                            ? "bg-blue-100 text-blue-700"
-                            : computedStatus === "ongoing"
-                            ? "bg-green-100 text-green-700"
-                            : computedStatus === "completed"
-                            ? "bg-gray-100 text-gray-700"
-                            : "bg-red-100 text-red-700"
-                        }`}
-                      >
-                        {computedStatus}
-                      </span>
-
-                      {isVotingOpen(election) && canVoteInElections && (
-                        <Link
-                          to={`/clubs/${clubId}/elections/${election._id}`}
-                          className="rounded-xl bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700"
-                        >
-                          Vote Now
-                        </Link>
-                      )}
-
-                      {!isVotingOpen(election) && (
-                        <Link
-                          to={`/clubs/${clubId}/elections/${election._id}`}
-                          className="rounded-xl border px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
-                        >
-                          View Details
-                        </Link>
-                      )}
-
-                      {canCreateOrManageElections && (
-                        <div className="flex gap-2">
-                          <button
-                            type="button"
-                            onClick={() => handleEdit(election)}
-                            className="rounded-xl border px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
-                          >
-                            Edit
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => handleDelete(election._id)}
-                            className="rounded-xl bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700"
-                          >
-                            Delete
-                          </button>
-                        </div>
-                      )}
+                    <div className="rounded-2xl bg-[#eef4ff] p-3">
+                      <p className="text-xs font-semibold uppercase tracking-wide text-[#2f5ea8]">
+                        Voting
+                      </p>
+                      <p className="mt-1 text-sm text-[#1b2230]">
+                        {formatDateTime(election.votingStartDate)}
+                      </p>
+                      <p className="mt-1 text-sm text-[#1b2230]">
+                        to {formatDateTime(election.votingEndDate)}
+                      </p>
                     </div>
                   </div>
 
-                  {Array.isArray(election.candidates) &&
-                    election.candidates.length > 0 && (
-                      <div className="mt-4 border-t pt-4">
-                        <p className="mb-2 text-sm font-medium text-gray-700">
-                          Candidates
-                        </p>
-                        <div className="flex flex-wrap gap-2">
-                          {election.candidates.map((candidate, index) => (
-                            <span
-                              key={`${election._id}-${index}`}
-                              className="rounded-full bg-gray-100 px-3 py-1 text-sm text-gray-700"
-                            >
-                              {candidate?.name || `Candidate ${index + 1}`}
-                            </span>
-                          ))}
-                        </div>
-                      </div>
-                    )}
+                  {election.eligibility && (
+                    <div className="mt-3 rounded-2xl bg-[#fff4ec] p-3">
+                      <p className="text-xs font-semibold uppercase tracking-wide text-[#f37021]">
+                        Eligibility
+                      </p>
+                      <p className="mt-1 text-sm text-[#1b2230]">
+                        {election.eligibility}
+                      </p>
+                    </div>
+                  )}
+
+                  <div className="mt-3">
+                    <p className="text-sm font-semibold text-[#516072]">
+                      Candidates:
+                    </p>
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      {Array.isArray(election.candidates) &&
+                      election.candidates.length > 0 ? (
+                        election.candidates.map((candidate, index) => (
+                          <span
+                            key={index}
+                            className="rounded-full bg-[#eef4ff] px-3 py-1 text-xs font-semibold text-[#2f5ea8]"
+                          >
+                            {candidate.name || `Candidate ${index + 1}`}
+                          </span>
+                        ))
+                      ) : (
+                        <span className="text-sm text-[#516072]">
+                          No candidates added
+                        </span>
+                      )}
+                    </div>
+                  </div>
                 </div>
-              );
-            })}
-          </div>
-        )}
+
+                <div className="flex flex-col gap-3 lg:w-[220px]">
+                  <Link
+                    to={`/clubs/${clubId}/elections/${election._id}`}
+                    className="inline-flex items-center justify-center rounded-xl bg-[#2f5ea8] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#3a6dbc]"
+                  >
+                    {isVotingOpen(election) && canVoteInElections
+                      ? "Vote Now"
+                      : "View Election"}
+                  </Link>
+
+                  {canCreateOrManageElections && (
+                    <>
+                      <button
+                        type="button"
+                        onClick={() => handleEdit(election)}
+                        className="rounded-xl border border-[#d7e2f6] px-4 py-2.5 text-sm font-semibold text-[#516072] hover:bg-[#eef4ff]"
+                      >
+                        Edit
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => handleDelete(election._id)}
+                        className="rounded-xl bg-[#f37021] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#d85f1b]"
+                      >
+                        Delete
+                      </button>
+                    </>
+                  )}
+                </div>
+              </div>
+            </div>
+          );
+        })}
       </div>
-    </div>
-  );
+    )}
+  </div>
+);
 }

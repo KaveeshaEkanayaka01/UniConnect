@@ -4,7 +4,7 @@ import {
   getAllNews,
   getSingleNews,
   updateNews,
-  deleteNews
+  deleteNews,
 } from '../controllers/newsController.js';
 
 const router = express.Router();

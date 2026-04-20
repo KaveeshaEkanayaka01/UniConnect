@@ -11,7 +11,7 @@ const MANAGEMENT_ROLES = [
   "VICE_PRESIDENT",
   "SECRETARY",
   "TREASURER",
-  "EXECUTIVE",
+  "executive_committee_member",
   "ASSISTANT_SECRETARY",
   "ASSISTANT_TREASURER",
   "EVENT_COORDINATOR",
@@ -277,250 +277,171 @@ export default function ElectionVote() {
   };
 
   return (
-    <div className="space-y-6">
-      <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-        <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-          <div>
-            <button
-              type="button"
-              onClick={() => navigate(`/clubs/${clubId}/manage`)}
-              className="mb-4 inline-flex items-center rounded-xl border border-slate-200 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
-            >
-              Back to Club Dashboard
-            </button>
+  <div className="space-y-6">
 
-            <h1 className="text-3xl font-bold text-slate-900">
-              {election.title || "Election"}
-            </h1>
+    {/* HEADER CARD */}
+    <div className="rounded-3xl border border-[#0B1E8A]/10 bg-[#0B1E8A]/5 p-6 shadow-sm">
+      <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
 
-            <p className="mt-2 text-slate-500">
-              {election.description || "No description provided."}
-            </p>
+        <div>
+          <button
+            type="button"
+            onClick={() => navigate(`/clubs/${clubId}/manage`)}
+            className="mb-4 inline-flex items-center rounded-xl border border-[#0B1E8A]/20 px-4 py-2 text-sm font-medium text-[#0B1E8A] hover:bg-[#0B1E8A]/5"
+          >
+            Back to Club Dashboard
+          </button>
 
-            <div className="mt-4 flex flex-wrap gap-3">
-              <span className="rounded-full bg-indigo-100 px-4 py-2 text-sm font-semibold text-indigo-700">
-                {election.position || "Position not specified"}
-              </span>
+          <h1 className="text-3xl font-black text-[#0B1E8A]">
+            {election.title || "Election"}
+          </h1>
 
-              <span
-                className={`rounded-full px-4 py-2 text-sm font-semibold ${getStatusBadgeClass(
-                  electionStatus
-                )}`}
-              >
-                {electionStatus}
-              </span>
-
-              {isVotingOpen(election) && (
-                <span className="rounded-full bg-green-100 px-4 py-2 text-sm font-semibold text-green-700">
-                  Voting Open
-                </span>
-              )}
-
-              <span className="rounded-full bg-slate-100 px-4 py-2 text-sm font-semibold text-slate-700">
-                {isSystemAdmin
-                  ? "System Admin"
-                  : isClubManager
-                  ? "Club Management"
-                  : isMember
-                  ? "Member"
-                  : "Viewer"}
-              </span>
-            </div>
-          </div>
-        </div>
-
-        <div className="mt-6 grid gap-4 md:grid-cols-2">
-          <div className="rounded-2xl border border-slate-200 p-4">
-            <p className="text-sm font-semibold text-slate-700">
-              Nomination Start
-            </p>
-            <p className="mt-1 text-slate-600">
-              {formatDateTime(election.nominationStartDate)}
-            </p>
-          </div>
-
-          <div className="rounded-2xl border border-slate-200 p-4">
-            <p className="text-sm font-semibold text-slate-700">
-              Nomination End
-            </p>
-            <p className="mt-1 text-slate-600">
-              {formatDateTime(election.nominationEndDate)}
-            </p>
-          </div>
-
-          <div className="rounded-2xl border border-slate-200 p-4">
-            <p className="text-sm font-semibold text-slate-700">
-              Voting Start
-            </p>
-            <p className="mt-1 text-slate-600">
-              {formatDateTime(election.votingStartDate)}
-            </p>
-          </div>
-
-          <div className="rounded-2xl border border-slate-200 p-4">
-            <p className="text-sm font-semibold text-slate-700">Voting End</p>
-            <p className="mt-1 text-slate-600">
-              {formatDateTime(election.votingEndDate)}
-            </p>
-          </div>
-        </div>
-
-        <div className="mt-4 rounded-2xl border border-slate-200 p-4">
-          <p className="text-sm font-semibold text-slate-700">Eligibility</p>
-          <p className="mt-1 text-slate-600">
-            {election.eligibility || "No eligibility rules specified."}
+          <p className="mt-2 text-gray-600">
+            {election.description || "No description provided."}
           </p>
-        </div>
-      </div>
 
-      <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-        <div className="mb-4 flex items-center justify-between gap-4">
-          <h2 className="text-2xl font-bold text-slate-900">Candidates</h2>
-          <span className="text-sm font-semibold text-indigo-600">
-            {Array.isArray(election.candidates) ? election.candidates.length : 0}{" "}
-            total
-          </span>
-        </div>
+          <div className="mt-4 flex flex-wrap gap-3">
 
-        {!Array.isArray(election.candidates) || election.candidates.length === 0 ? (
-          <p className="text-slate-500">
-            No candidates available for this election.
-          </p>
-        ) : (
-          <div className="space-y-4">
-            {election.candidates.map((candidate, index) => {
-              const isSelected = selectedCandidateIndex === index;
-              const isMyVote = votedCandidateIndex === index;
-
-              return (
-                <label
-                  key={index}
-                  className={`block rounded-2xl border p-4 transition ${
-                    isSelected
-                      ? "border-indigo-400 bg-indigo-50"
-                      : "border-slate-200 bg-white"
-                  } ${canVote ? "cursor-pointer" : "cursor-default"}`}
-                >
-                  <div className="flex items-start justify-between gap-4">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-3">
-                        <input
-                          type="radio"
-                          name="candidate"
-                          checked={isSelected}
-                          disabled={!canVote}
-                          onChange={() => setSelectedCandidateIndex(index)}
-                        />
-                        <div>
-                          <h3 className="font-semibold text-slate-900">
-                            {candidate.name || `Candidate ${index + 1}`}
-                          </h3>
-                          {isMyVote && (
-                            <p className="mt-1 text-sm font-medium text-green-600">
-                              Your vote
-                            </p>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </label>
-              );
-            })}
-          </div>
-        )}
-
-        <div className="mt-6">
-          {electionStatus === "upcoming" && (
-            <p className="rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-700">
-              Voting has not started yet.
-            </p>
-          )}
-
-          {electionStatus === "completed" && (
-            <p className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700">
-              This election has ended. Final results are shown below.
-            </p>
-          )}
-
-          {electionStatus === "cancelled" && (
-            <p className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-              This election has been cancelled.
-            </p>
-          )}
-
-          {hasVoted && electionStatus === "ongoing" && (
-            <p className="rounded-xl border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-700">
-              You have already voted in this election.
-            </p>
-          )}
-
-          {!isMember && electionStatus === "ongoing" && (
-            <p className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700">
-              Only club members can vote. You can view the election details and
-              results here.
-            </p>
-          )}
-
-          {voteMessage && (
-            <p className="mt-4 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700">
-              {voteMessage}
-            </p>
-          )}
-
-          {canVote && (
-            <button
-              type="button"
-              onClick={handleVoteSubmit}
-              disabled={submittingVote}
-              className="mt-4 inline-flex items-center justify-center rounded-xl bg-indigo-600 px-5 py-2.5 font-semibold text-white hover:bg-indigo-700 disabled:opacity-60"
-            >
-              {submittingVote ? "Submitting Vote..." : "Submit Vote"}
-            </button>
-          )}
-        </div>
-      </div>
-
-      <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-        <div className="mb-4 flex items-center justify-between gap-4">
-          <h2 className="text-2xl font-bold text-slate-900">Results</h2>
-          {results?.totalVotes !== undefined && (
-            <span className="text-sm font-semibold text-indigo-600">
-              {results.totalVotes} total votes
+            <span className="rounded-full bg-[#0B1E8A]/10 px-4 py-2 text-sm font-semibold text-[#0B1E8A]">
+              {election.position || "Position not specified"}
             </span>
-          )}
-        </div>
 
-        {resultsLoading ? (
-          <p className="text-slate-500">Loading results...</p>
-        ) : !results || !Array.isArray(results.results) || results.results.length === 0 ? (
-          <p className="text-slate-500">No results available yet.</p>
-        ) : (
-          <div className="space-y-4">
-            {results.results.map((result, index) => (
-              <div key={index} className="rounded-2xl border border-slate-200 p-4">
-                <div className="flex items-center justify-between gap-4">
-                  <div>
-                    <h3 className="font-semibold text-slate-900">{result.name}</h3>
-                    <p className="mt-1 text-sm text-slate-500">
-                      {result.votes} votes • {result.percentage}%
-                    </p>
-                  </div>
+            <span
+              className={`rounded-full px-4 py-2 text-sm font-semibold ${getStatusBadgeClass(
+                electionStatus
+              )}`}
+            >
+              {electionStatus}
+            </span>
 
-                  <div className="w-32 md:w-48">
-                    <div className="h-3 overflow-hidden rounded-full bg-slate-200">
-                      <div
-                        className="h-3 rounded-full bg-indigo-600"
-                        style={{ width: `${Number(result.percentage || 0)}%` }}
-                      />
-                    </div>
-                  </div>
-                </div>
-              </div>
-            ))}
+            {isVotingOpen(election) && (
+              <span className="rounded-full bg-green-100 px-4 py-2 text-sm font-semibold text-green-700">
+                Voting Open
+              </span>
+            )}
+
+            <span className="rounded-full bg-[#0B1E8A]/10 px-4 py-2 text-sm font-semibold text-[#0B1E8A]">
+              {isSystemAdmin
+                ? "System Admin"
+                : isClubManager
+                ? "Club Management"
+                : isMember
+                ? "Member"
+                : "Viewer"}
+            </span>
+
           </div>
-        )}
+        </div>
+      </div>
+
+      {/* DATES */}
+      <div className="mt-6 grid gap-4 md:grid-cols-2">
+        {[
+          ["Nomination Start", election.nominationStartDate],
+          ["Nomination End", election.nominationEndDate],
+          ["Voting Start", election.votingStartDate],
+          ["Voting End", election.votingEndDate],
+        ].map(([label, value]) => (
+          <div
+            key={label}
+            className="rounded-2xl border border-[#0B1E8A]/10 bg-white p-4"
+          >
+            <p className="text-sm font-semibold text-[#0B1E8A]">{label}</p>
+            <p className="mt-1 text-gray-600">
+              {formatDateTime(value)}
+            </p>
+          </div>
+        ))}
+      </div>
+
+      <div className="mt-4 rounded-2xl border border-[#0B1E8A]/10 bg-white p-4">
+        <p className="text-sm font-semibold text-[#0B1E8A]">Eligibility</p>
+        <p className="mt-1 text-gray-600">
+          {election.eligibility || "No eligibility rules specified."}
+        </p>
       </div>
     </div>
-  );
+
+    {/* CANDIDATES */}
+    <div className="rounded-3xl border border-[#0B1E8A]/10 bg-[#0B1E8A]/5 p-6 shadow-sm">
+      <div className="mb-4 flex justify-between">
+        <h2 className="text-2xl font-black text-[#0B1E8A]">Candidates</h2>
+        <span className="text-sm font-semibold text-[#F36C21]">
+          {election.candidates?.length || 0} total
+        </span>
+      </div>
+
+      <div className="space-y-4">
+        {election.candidates?.map((candidate, index) => {
+          const isSelected = selectedCandidateIndex === index;
+          const isMyVote = votedCandidateIndex === index;
+
+          return (
+            <label
+              key={index}
+              className={`block rounded-2xl border p-4 transition ${
+                isSelected
+                  ? "border-[#F36C21] bg-[#F36C21]/10"
+                  : "border-[#0B1E8A]/10 bg-white"
+              }`}
+            >
+              <div className="flex items-center gap-3">
+                <input
+                  type="radio"
+                  checked={isSelected}
+                  disabled={!canVote}
+                  onChange={() => setSelectedCandidateIndex(index)}
+                />
+
+                <div>
+                  <h3 className="font-semibold text-[#0B1E8A]">
+                    {candidate.name || `Candidate ${index + 1}`}
+                  </h3>
+
+                  {isMyVote && (
+                    <p className="text-sm text-green-600">Your vote</p>
+                  )}
+                </div>
+              </div>
+            </label>
+          );
+        })}
+      </div>
+
+      {canVote && (
+        <button
+          onClick={handleVoteSubmit}
+          disabled={submittingVote}
+          className="mt-6 rounded-xl bg-[#F36C21] px-6 py-3 text-white font-bold hover:bg-orange-600"
+        >
+          {submittingVote ? "Submitting..." : "Submit Vote"}
+        </button>
+      )}
+    </div>
+
+    {/* RESULTS */}
+    <div className="rounded-3xl border border-[#0B1E8A]/10 bg-[#0B1E8A]/5 p-6 shadow-sm">
+      <h2 className="text-2xl font-black text-[#0B1E8A] mb-4">
+        Results
+      </h2>
+
+      {results?.results?.map((r, i) => (
+        <div key={i} className="mb-4">
+          <div className="flex justify-between text-sm font-semibold text-[#0B1E8A]">
+            <span>{r.name}</span>
+            <span>{r.percentage}%</span>
+          </div>
+
+          <div className="h-3 bg-[#0B1E8A]/10 rounded-full mt-2 overflow-hidden">
+            <div
+              className="h-3 bg-[#F36C21]"
+              style={{ width: `${r.percentage}%` }}
+            />
+          </div>
+        </div>
+      ))}
+    </div>
+
+  </div>
+);
 }

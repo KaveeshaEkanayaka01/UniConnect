@@ -14,7 +14,11 @@ const ProtectedRoute = ({ children, allowedRoles }) => {
   }
 
   if (Array.isArray(allowedRoles) && allowedRoles.length > 0) {
-    const storedUser = JSON.parse(localStorage.getItem("user") || "{}");
+    const storedUser =
+  JSON.parse(localStorage.getItem("userInfo")) ||
+  JSON.parse(localStorage.getItem("user")) ||
+  JSON.parse(localStorage.getItem("authUser")) ||
+  {};
     const userRole = normalizeRole(storedUser?.role);
     const isAllowed = allowedRoles.map(normalizeRole).includes(userRole);
 

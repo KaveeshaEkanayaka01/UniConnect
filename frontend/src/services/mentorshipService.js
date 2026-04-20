@@ -8,6 +8,24 @@ export const createMentorProfile = async (clubId, payload) => {
   return res.data;
 };
 
+export const getMyMentorProfile = async (clubId) => {
+  const res = await API.get(`/mentorships/club/${clubId}/my-mentor-profile`);
+  return res.data;
+};
+
+export const updateMyMentorProfile = async (clubId, payload) => {
+  const res = await API.put(
+    `/mentorships/club/${clubId}/mentor-profile`,
+    payload
+  );
+  return res.data;
+};
+
+export const deleteMyMentorProfile = async (clubId) => {
+  const res = await API.delete(`/mentorships/club/${clubId}/mentor-profile`);
+  return res.data;
+};
+
 export const getClubMentors = async (clubId) => {
   const res = await API.get(`/mentorships/club/${clubId}/mentors`);
   return res.data;

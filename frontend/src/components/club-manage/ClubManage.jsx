@@ -10,11 +10,8 @@ import {
   Vote,
   CalendarDays,
   Wallet,
-  Save,
-  Upload,
-  FileText,
-  Download,
   Handshake,
+  FileText,
 } from "lucide-react";
 import {
   approveJoinRequest,
@@ -24,54 +21,33 @@ import {
   rejectJoinRequest,
   removeClubMember,
   updateClubMemberRole,
-  updateClubProfile,
-  uploadClubConstitution,
+  getClubMembers,
 } from "../../services/clubService";
 
 import BudgetsTab from "./BudgetsTab";
 import Election from "./Election";
-import ClubEvent from "./ClubEvent";
+import ClubMeeting from "./ClubMeeting";
 import ClubExpenses from "./ClubExpenses";
 import MentorshipTab from "./MentorshipTab";
 import CreateMentorProfile from "./CreateMentorProfile";
+import ClubSettingsTab from "./ClubSettingsTab";
 
 const roleOptions = [
-  "member",
-  "executive",
-  "vice_president",
-  "president",
-  "club_admin",
-];
-
-const categories = [
-  "Academic",
-  "Engineering",
-  "Environment",
-  "Creative",
-  "Business",
-  "Cultural",
-  "Sports",
-  "Arts",
+  "MEMBER",
+  "PRESIDENT",
+  "VICE_PRESIDENT",
+  "SECRETARY",
+  "ASSISTANT_SECRETARY",
+  "TREASURER",
+  "ASSISTANT_TREASURER",
+  "EVENT_COORDINATOR",
+  "PROJECT_COORDINATOR",
+  "EXECUTIVE_COMMITTEE_MEMBER",
 ];
 
 const API_BASE_URL =
   import.meta.env.VITE_API_URL?.replace(/\/api\/?$/, "") ||
   "http://localhost:5000";
-
-const tabButtonClass = (active, tone = "default") => {
-  const base =
-    "inline-flex items-center gap-2 px-5 py-3 rounded-2xl border text-sm font-semibold transition";
-
-  if (active && tone === "warning") {
-    return `${base} bg-amber-50 border-amber-400 text-slate-800`;
-  }
-
-  if (active) {
-    return `${base} bg-indigo-50 border-indigo-400 text-slate-800`;
-  }
-
-  return `${base} bg-white border-slate-200 text-slate-700 hover:bg-slate-50`;
-};
 
 const getStoredCurrentUser = () => {
   const keys = ["user", "currentUser", "authUser", "userInfo"];
@@ -97,26 +73,15 @@ const ClubManage = () => {
   const [dashboard, setDashboard] = useState(null);
   const [club, setClub] = useState(null);
   const [joinRequests, setJoinRequests] = useState([]);
+  const [members, setMembers] = useState([]);
   const [currentUser, setCurrentUser] = useState(getStoredCurrentUser());
 
   const [loading, setLoading] = useState(true);
-  const [savingProfile, setSavingProfile] = useState(false);
-  const [uploadingConstitution, setUploadingConstitution] = useState(false);
   const [message, setMessage] = useState("");
-  const [constitutionMessage, setConstitutionMessage] = useState("");
 
   const [memberSearch, setMemberSearch] = useState("");
   const [requestSearch, setRequestSearch] = useState("");
   const [activeTab, setActiveTab] = useState("mentorship");
-
-  const [form, setForm] = useState({
-    name: "",
-    description: "",
-    category: "",
-    tags: "",
-  });
-
-  const [constitutionFile, setConstitutionFile] = useState(null);
 
   const normalizedSystemRole = useMemo(() => {
     return String(currentUser?.role || "").trim().toUpperCase();
@@ -140,17 +105,11 @@ const ClubManage = () => {
   const canCreateMentorProfile = useMemo(() => {
     if (isSystemAdmin) return true;
 
-    if (
-      ["club_admin", "president", "vice_president", "executive"].includes(
-        membershipRole
-      )
-    ) {
+    if (["club_admin", "president", "vice_president"].includes(membershipRole)) {
       return true;
     }
 
-    if (
-      ["CLUB_ADMIN", "SYSTEM_ADMIN", "CLUB_MEMBER"].includes(normalizedSystemRole)
-    ) {
+    if (["CLUB_ADMIN", "SYSTEM_ADMIN"].includes(normalizedSystemRole)) {
       return true;
     }
 
@@ -161,7 +120,6 @@ const ClubManage = () => {
     try {
       setLoading(true);
       setMessage("");
-      setConstitutionMessage("");
 
       const storedUser = getStoredCurrentUser();
       setCurrentUser(storedUser);
@@ -178,24 +136,22 @@ const ClubManage = () => {
         return;
       }
 
-      const [clubRes, requestsRes] = await Promise.all([
+      const [clubRes, requestsRes, membersRes] = await Promise.all([
         getClubById(clubId),
         getAllJoinRequests(clubId, "all"),
+        getClubMembers(clubId),
       ]);
 
       const clubData = clubRes?.data || clubRes;
       const requestsData = requestsRes?.data || requestsRes || [];
+      const membersData = Array.isArray(membersRes)
+        ? membersRes
+        : membersRes?.data || [];
 
       setDashboard(dashboardData);
       setClub(clubData);
       setJoinRequests(Array.isArray(requestsData) ? requestsData : []);
-
-      setForm({
-        name: clubData?.name || "",
-        description: clubData?.description || "",
-        category: clubData?.category || "Academic",
-        tags: Array.isArray(clubData?.tags) ? clubData.tags.join(", ") : "",
-      });
+      setMembers(Array.isArray(membersData) ? membersData : []);
     } catch (error) {
       console.error("Failed to load club management data:", error);
       alert(
@@ -227,11 +183,11 @@ const ClubManage = () => {
 
   const filteredMembers = useMemo(() => {
     const q = memberSearch.trim().toLowerCase();
-    const members = club?.members || [];
+    const clubMembers = members || [];
 
-    if (!q) return members;
+    if (!q) return clubMembers;
 
-    return members.filter((member) =>
+    return clubMembers.filter((member) =>
       [
         member.user?.fullName,
         member.user?.name,
@@ -244,7 +200,7 @@ const ClubManage = () => {
         .toLowerCase()
         .includes(q)
     );
-  }, [club, memberSearch]);
+  }, [members, memberSearch]);
 
   const filteredRequests = useMemo(() => {
     const q = requestSearch.trim().toLowerCase();
@@ -276,85 +232,30 @@ const ClubManage = () => {
   }, [joinRequests]);
 
   const memberCount = useMemo(() => {
-    return (club?.members || []).filter(
-      (member) => String(member.status || "").toLowerCase() === "active"
-    ).length;
-  }, [club]);
+    return (members || []).filter((member) => {
+      const status = String(member.status || "").toLowerCase();
+      return status === "approved";
+    }).length;
+  }, [members]);
 
-  const constitutionDownloadUrl = club?._id
-    ? `${API_BASE_URL}/api/clubs/${club._id}/constitution/download`
-    : null;
+  const getImageSrc = (imageUrl) => {
+    if (!imageUrl) return "";
+    if (/^https?:\/\//i.test(imageUrl)) return imageUrl;
 
-  const handleProfileSave = async (e) => {
-    e.preventDefault();
-
-    try {
-      setSavingProfile(true);
-      setMessage("");
-
-      const payload = {
-        name: form.name.trim(),
-        description: form.description.trim(),
-        category: form.category,
-        tags: form.tags
-          .split(",")
-          .map((tag) => tag.trim())
-          .filter(Boolean),
-      };
-
-      await updateClubProfile(clubId, payload);
-      setMessage("Club details updated successfully");
-      await loadData();
-      setActiveTab("settings");
-    } catch (error) {
-      setMessage(
-        error?.response?.data?.message || "Failed to update club details"
-      );
-    } finally {
-      setSavingProfile(false);
-    }
+    return imageUrl.startsWith("/")
+      ? `${API_BASE_URL}${imageUrl}`
+      : `${API_BASE_URL}/${imageUrl}`;
   };
 
-  const handleConstitutionUpload = async (e) => {
-    e.preventDefault();
-
-    setConstitutionMessage("");
-
-    if (!constitutionFile) {
-      setConstitutionMessage("Please select a PDF file");
-      return;
-    }
-
-    if (constitutionFile.type !== "application/pdf") {
-      setConstitutionMessage("Only PDF files are allowed");
+  const handleRoleChange = async (membershipId, newRole) => {
+    if (!membershipId) {
+      setMessage("Invalid membership ID");
       return;
     }
 
     try {
-      setUploadingConstitution(true);
-
-      const formData = new FormData();
-      formData.append("constitution", constitutionFile);
-
-      await uploadClubConstitution(clubId, formData);
-
-      setConstitutionMessage("Constitution updated successfully");
-      setConstitutionFile(null);
-      await loadData();
-      setActiveTab("settings");
-    } catch (error) {
-      setConstitutionMessage(
-        error?.response?.data?.message || "Failed to update constitution"
-      );
-    } finally {
-      setUploadingConstitution(false);
-    }
-  };
-
-  const handleRoleChange = async (userId, newRole) => {
-    try {
       setMessage("");
-      await updateClubMemberRole(clubId, userId, newRole);
+      await updateClubMemberRole(clubId, membershipId, newRole);
       setMessage("Member role updated successfully");
       await loadData();
     } catch (error) {
@@ -364,19 +265,23 @@ const ClubManage = () => {
     }
   };
 
-  const handleRemoveMember = async (userId) => {
+  const handleRemoveMember = async (membershipId) => {
+    if (!membershipId) {
+      setMessage("Invalid membership ID");
+      return;
+    }
+
     const confirmed = window.confirm("Remove this member from the club?");
     if (!confirmed) return;
 
     try {
       setMessage("");
-      await removeClubMember(clubId, userId);
+      await removeClubMember(clubId, membershipId);
       setMessage("Member removed successfully");
       await loadData();
     } catch (error) {
-      setMessage(
-        error?.response?.data?.message || "Failed to remove member"
-      );
+      console.error("remove error:", error?.response?.data || error);
+      setMessage(error?.response?.data?.message || "Failed to remove member");
     }
   };
 
@@ -384,17 +289,13 @@ const ClubManage = () => {
     try {
       setMessage("");
       await approveJoinRequest(clubId, requestId);
-
       setJoinRequests((prev) =>
         prev.filter((request) => request._id !== requestId)
       );
-
       setMessage("Join request approved successfully");
       await loadData();
     } catch (error) {
-      setMessage(
-        error?.response?.data?.message || "Failed to approve request"
-      );
+      setMessage(error?.response?.data?.message || "Failed to approve request");
     }
   };
 
@@ -404,17 +305,13 @@ const ClubManage = () => {
     try {
       setMessage("");
       await rejectJoinRequest(clubId, requestId, reason);
-
       setJoinRequests((prev) =>
         prev.filter((request) => request._id !== requestId)
       );
-
       setMessage("Join request rejected successfully");
       await loadData();
     } catch (error) {
-      setMessage(
-        error?.response?.data?.message || "Failed to reject request"
-      );
+      setMessage(error?.response?.data?.message || "Failed to reject request");
     }
   };
 
@@ -428,26 +325,38 @@ const ClubManage = () => {
 
   return (
     <div className="space-y-8">
-      <div className="bg-white rounded-3xl border border-slate-200 p-7 shadow-sm">
-        <p className="text-xs font-black uppercase tracking-[0.2em] text-indigo-500">
-          {club?.name ? `${club.name} Club Management` : "Club Management"}
-        </p>
+      <div className="bg-white rounded-3xl border border-[#0a1e8c]/15 p-7 shadow-sm">
+        <div className="flex items-start gap-4">
+          {club?.logo && (
+            <img
+              src={getImageSrc(club.logo)}
+              alt={`${club.name || "Club"} logo`}
+              className="h-20 w-20 rounded-2xl object-cover border border-[#0a1e8c]/15 shadow-sm"
+            />
+          )}
 
-        <h1 className="mt-2 text-3xl font-black text-slate-900">
-          Manage Club
-        </h1>
+          <div>
+            <p className="text-xs font-black uppercase tracking-[0.2em] text-[#f37021]">
+              {club?.name ? `${club.name} Club Management` : "Club Management"}
+            </p>
 
-        <p className="mt-2 text-sm text-slate-500">
-          Membership role:{" "}
-          <span className="font-semibold text-slate-700">
-            {isSystemAdmin
-              ? "SYSTEM_ADMIN"
-              : dashboard?.membership?.role || "member"}
-          </span>
-        </p>
+            <h1 className="mt-2 text-3xl font-black text-[#0a1e8c]">
+              Manage Club
+            </h1>
+
+            <p className="mt-2 text-sm text-[#4a5b86]">
+              Membership role:{" "}
+              <span className="font-semibold text-[#0a1e8c]">
+                {isSystemAdmin
+                  ? "SYSTEM_ADMIN"
+                  : dashboard?.membership?.role || "member"}
+              </span>
+            </p>
+          </div>
+        </div>
 
         {message && (
-          <p className="mt-3 text-sm font-semibold text-indigo-600">
+          <p className="mt-3 text-sm font-semibold text-[#f37021]">
             {message}
           </p>
         )}
@@ -455,7 +364,11 @@ const ClubManage = () => {
         <div className="mt-6 flex flex-wrap gap-3">
           <button
             onClick={() => setActiveTab("mentorship")}
-            className={tabButtonClass(activeTab === "mentorship")}
+            className={`inline-flex items-center gap-2 px-5 py-3 rounded-2xl border text-sm font-semibold transition ${
+              activeTab === "mentorship"
+                ? "bg-[#0a1e8c] border-[#0a1e8c] text-white"
+                : "bg-white border-[#0a1e8c]/15 text-[#0a1e8c] hover:bg-[#f5f8ff]"
+            }`}
           >
             <Handshake size={16} />
             Mentorship
@@ -463,7 +376,11 @@ const ClubManage = () => {
 
           <button
             onClick={() => setActiveTab("budgets")}
-            className={tabButtonClass(activeTab === "budgets")}
+            className={`inline-flex items-center gap-2 px-5 py-3 rounded-2xl border text-sm font-semibold transition ${
+              activeTab === "budgets"
+                ? "bg-[#0a1e8c] border-[#0a1e8c] text-white"
+                : "bg-white border-[#0a1e8c]/15 text-[#0a1e8c] hover:bg-[#f5f8ff]"
+            }`}
           >
             <DollarSign size={16} />
             Budgets
@@ -471,7 +388,11 @@ const ClubManage = () => {
 
           <button
             onClick={() => setActiveTab("expenses")}
-            className={tabButtonClass(activeTab === "expenses")}
+            className={`inline-flex items-center gap-2 px-5 py-3 rounded-2xl border text-sm font-semibold transition ${
+              activeTab === "expenses"
+                ? "bg-[#0a1e8c] border-[#0a1e8c] text-white"
+                : "bg-white border-[#0a1e8c]/15 text-[#0a1e8c] hover:bg-[#f5f8ff]"
+            }`}
           >
             <Wallet size={16} />
             Expenses
@@ -479,15 +400,23 @@ const ClubManage = () => {
 
           <button
             onClick={() => setActiveTab("events")}
-            className={tabButtonClass(activeTab === "events")}
+            className={`inline-flex items-center gap-2 px-5 py-3 rounded-2xl border text-sm font-semibold transition ${
+              activeTab === "events"
+                ? "bg-[#0a1e8c] border-[#0a1e8c] text-white"
+                : "bg-white border-[#0a1e8c]/15 text-[#0a1e8c] hover:bg-[#f5f8ff]"
+            }`}
           >
             <CalendarDays size={16} />
-            Events
+            Meetings
           </button>
 
           <button
             onClick={() => setActiveTab("elections")}
-            className={tabButtonClass(activeTab === "elections")}
+            className={`inline-flex items-center gap-2 px-5 py-3 rounded-2xl border text-sm font-semibold transition ${
+              activeTab === "elections"
+                ? "bg-[#0a1e8c] border-[#0a1e8c] text-white"
+                : "bg-white border-[#0a1e8c]/15 text-[#0a1e8c] hover:bg-[#f5f8ff]"
+            }`}
           >
             <Vote size={16} />
             Elections
@@ -496,10 +425,11 @@ const ClubManage = () => {
           {canManageJoinRequests && (
             <button
               onClick={() => setActiveTab("joinRequests")}
-              className={tabButtonClass(
-                activeTab === "joinRequests",
-                "warning"
-              )}
+              className={`inline-flex items-center gap-2 px-5 py-3 rounded-2xl border text-sm font-semibold transition ${
+                activeTab === "joinRequests"
+                  ? "bg-[#f37021] border-[#f37021] text-white"
+                  : "bg-white border-[#f37021]/20 text-[#f37021] hover:bg-[#fff4ec]"
+              }`}
             >
               <ShieldCheck size={16} />
               Join Requests ({pendingRequestsCount})
@@ -509,7 +439,11 @@ const ClubManage = () => {
           {canManageMembers && (
             <button
               onClick={() => setActiveTab("members")}
-              className={tabButtonClass(activeTab === "members")}
+              className={`inline-flex items-center gap-2 px-5 py-3 rounded-2xl border text-sm font-semibold transition ${
+                activeTab === "members"
+                  ? "bg-[#0a1e8c] border-[#0a1e8c] text-white"
+                  : "bg-white border-[#0a1e8c]/15 text-[#0a1e8c] hover:bg-[#f5f8ff]"
+              }`}
             >
               <Users size={16} />
               Members ({memberCount})
@@ -519,7 +453,11 @@ const ClubManage = () => {
           {canManageSettings && (
             <button
               onClick={() => setActiveTab("settings")}
-              className={tabButtonClass(activeTab === "settings")}
+              className={`inline-flex items-center gap-2 px-5 py-3 rounded-2xl border text-sm font-semibold transition ${
+                activeTab === "settings"
+                  ? "bg-[#0a1e8c] border-[#0a1e8c] text-white"
+                  : "bg-white border-[#0a1e8c]/15 text-[#0a1e8c] hover:bg-[#f5f8ff]"
+              }`}
             >
               <FileText size={16} />
               Settings
@@ -531,10 +469,7 @@ const ClubManage = () => {
       {activeTab === "mentorship" && (
         <div className="space-y-6">
           {canCreateMentorProfile && (
-            <CreateMentorProfile
-              clubId={clubId}
-              onCreated={loadData}
-            />
+            <CreateMentorProfile clubId={clubId} onCreated={loadData} />
           )}
 
           <MentorshipTab
@@ -564,7 +499,7 @@ const ClubManage = () => {
       )}
 
       {activeTab === "events" && (
-        <ClubEvent
+        <ClubMeeting
           clubId={clubId}
           club={club}
           membership={dashboard?.membership}
@@ -584,68 +519,75 @@ const ClubManage = () => {
       )}
 
       {activeTab === "joinRequests" && canManageJoinRequests && (
-        <div className="bg-white rounded-3xl border border-slate-200 p-6 shadow-sm">
-          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 mb-5">
+        <div className="bg-white rounded-3xl border border-[#0a1e8c]/15 p-6 shadow-sm">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
             <div>
-              <h2 className="text-2xl font-black text-slate-900">
+              <h2 className="text-2xl font-black text-[#0a1e8c]">
                 Join Requests
               </h2>
-              <p className="mt-1 text-sm text-slate-500">
-                Review and manage incoming membership requests.
+              <p className="mt-2 text-sm text-[#4a5b86]">
+                Review pending join requests for this club.
               </p>
             </div>
 
             <div className="relative w-full lg:w-96">
               <Search
                 size={16}
-                className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
+                className="absolute left-3 top-1/2 -translate-y-1/2 text-[#4a5b86]"
               />
               <input
                 value={requestSearch}
                 onChange={(e) => setRequestSearch(e.target.value)}
                 placeholder="Search requests..."
-                className="w-full pl-9 pr-4 py-2.5 text-sm rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-200"
+                className="w-full rounded-xl border border-[#0a1e8c]/15 bg-white pl-10 pr-4 py-2.5 text-sm text-[#0a1e8c]"
               />
             </div>
           </div>
 
           {filteredRequests.length === 0 ? (
-            <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 p-6 text-center text-slate-500">
-              No pending join requests.
+            <div className="mt-6 rounded-2xl border border-dashed border-[#0a1e8c]/15 px-4 py-10 text-center text-[#4a5b86]">
+              No pending join requests found.
             </div>
           ) : (
-            <div className="space-y-4">
+            <div className="mt-6 space-y-4">
               {filteredRequests.map((request) => (
                 <div
                   key={request._id}
-                  className="rounded-2xl border border-slate-200 p-4"
+                  className="rounded-3xl border border-[#0a1e8c]/15 bg-white p-5 shadow-sm"
                 >
-                  <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-                    <div>
-                      <h3 className="font-bold text-slate-900">
-                        {request.user?.fullName ||
-                          request.user?.name ||
-                          "Unknown User"}
-                      </h3>
-                      <p className="text-sm text-slate-500">
+                  <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                    <div className="flex-1">
+                      <div className="flex flex-wrap items-center gap-3">
+                        <h3 className="text-lg font-black text-[#0a1e8c]">
+                          {request.user?.fullName ||
+                            request.user?.name ||
+                            "Unknown Student"}
+                        </h3>
+
+                        <span className="rounded-full bg-[#fff4ec] px-3 py-1 text-xs font-semibold text-[#f37021]">
+                          {request.status || "pending"}
+                        </span>
+                      </div>
+
+                      <p className="mt-2 text-sm text-[#4a5b86]">
                         {request.user?.email || "-"}
                       </p>
-                      <p className="text-sm text-slate-500">
-                        Student ID: {request.user?.studentId || "-"}
+                      <p className="mt-1 text-sm text-[#4a5b86]">
+                        {request.user?.studentId || "-"}
                       </p>
                     </div>
 
                     <div className="flex gap-3">
                       <button
                         onClick={() => handleApproveRequest(request._id)}
-                        className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-emerald-600 text-white font-semibold hover:bg-emerald-700"
+                        className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-[#0a1e8c] text-white font-semibold hover:bg-[#08166f]"
                       >
                         Approve
                       </button>
 
                       <button
                         onClick={() => handleRejectRequest(request._id)}
-                        className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-rose-600 text-white font-semibold hover:bg-rose-700"
+                        className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-[#f37021] text-white font-semibold hover:bg-[#d85f1b]"
                       >
                         <XCircle size={16} />
                         Reject
@@ -660,219 +602,102 @@ const ClubManage = () => {
       )}
 
       {activeTab === "members" && canManageMembers && (
-        <div className="bg-white rounded-3xl border border-slate-200 p-6 shadow-sm">
-          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 mb-5">
+        <div className="bg-white rounded-3xl border border-[#0a1e8c]/15 p-6 shadow-sm">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
             <div>
-              <h2 className="text-2xl font-black text-slate-900">Members</h2>
-              <p className="mt-1 text-sm text-slate-500">
-                Manage club members and update their roles.
+              <h2 className="text-2xl font-black text-[#0a1e8c]">Members</h2>
+              <p className="mt-2 text-sm text-[#4a5b86]">
+                Manage club members, update their roles, and remove access when needed.
               </p>
             </div>
 
             <div className="relative w-full lg:w-96">
               <Search
                 size={16}
-                className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
+                className="absolute left-3 top-1/2 -translate-y-1/2 text-[#4a5b86]"
               />
               <input
                 value={memberSearch}
                 onChange={(e) => setMemberSearch(e.target.value)}
                 placeholder="Search members..."
-                className="w-full pl-9 pr-4 py-2.5 text-sm rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-200"
+                className="w-full rounded-xl border border-[#0a1e8c]/15 bg-white pl-10 pr-4 py-2.5 text-sm text-[#0a1e8c]"
               />
             </div>
           </div>
 
           {filteredMembers.length === 0 ? (
-            <p className="text-slate-500">No members found.</p>
+            <div className="mt-6 rounded-2xl border border-dashed border-[#0a1e8c]/15 px-4 py-10 text-center text-[#4a5b86]">
+              No members found.
+            </div>
           ) : (
-            <div className="space-y-4">
-              {filteredMembers.map((member) => (
-                <div
-                  key={member._id}
-                  className="rounded-2xl border border-slate-200 p-4"
-                >
-                  <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-                    <div>
-                      <h3 className="font-bold text-slate-900">
-                        {member.user?.fullName ||
-                          member.user?.name ||
-                          "Unknown User"}
-                      </h3>
-                      <p className="text-sm text-slate-500">
-                        {member.user?.email || "-"}
-                      </p>
-                    </div>
+            <div className="mt-6 space-y-4">
+              {filteredMembers.map((member) => {
+                const membershipId = member._id;
+                if (!membershipId) return null;
 
-                    <div className="flex flex-wrap items-center gap-3">
-                      <select
-                        value={member.role}
-                        onChange={(e) =>
-                          handleRoleChange(member.user?._id, e.target.value)
-                        }
-                        className="rounded-xl border border-slate-200 px-4 py-2.5 text-sm"
-                      >
-                        {roleOptions.map((role) => (
-                          <option key={role} value={role}>
-                            {role}
-                          </option>
-                        ))}
-                      </select>
+                return (
+                  <div
+                    key={membershipId}
+                    className="rounded-3xl border border-[#0a1e8c]/15 bg-white p-5 shadow-sm"
+                  >
+                    <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                      <div className="flex-1">
+                        <div className="flex flex-wrap items-center gap-3">
+                          <h3 className="text-lg font-black text-[#0a1e8c]">
+                            {member.user?.fullName ||
+                              member.user?.name ||
+                              "Unknown Member"}
+                          </h3>
 
-                      <button
-                        onClick={() => handleRemoveMember(member.user?._id)}
-                        className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-rose-600 text-white font-semibold hover:bg-rose-700"
-                      >
-                        <Trash2 size={16} />
-                        Remove
-                      </button>
+                          <span className="rounded-full bg-[#f5f8ff] px-3 py-1 text-xs font-semibold text-[#0a1e8c]">
+                            {member.role || "member"}
+                          </span>
+
+                          <span className="rounded-full bg-[#fff4ec] px-3 py-1 text-xs font-semibold text-[#f37021]">
+                            {member.status || "unknown"}
+                          </span>
+                        </div>
+
+                        <p className="mt-2 text-sm text-[#4a5b86]">
+                          {member.user?.email || "-"}
+                        </p>
+                      </div>
+
+                      <div className="flex flex-col gap-3 lg:w-[240px]">
+                        <select
+                          value={member.role || "MEMBER"}
+                          onChange={(e) =>
+                            handleRoleChange(membershipId, e.target.value)
+                          }
+                          className="rounded-xl border border-[#0a1e8c]/15 bg-white px-4 py-2.5 text-sm font-semibold text-[#0a1e8c]"
+                        >
+                          {roleOptions.map((role) => (
+                            <option key={role} value={role}>
+                              {role}
+                            </option>
+                          ))}
+                        </select>
+
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveMember(membershipId)}
+                          className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#f37021] px-4 py-2.5 text-sm font-semibold text-white"
+                        >
+                          <Trash2 size={16} />
+                          Remove Member
+                        </button>
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>
       )}
 
-      {activeTab === "settings" && canManageSettings && (
-        <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-          <div className="bg-white rounded-3xl border border-slate-200 p-6 shadow-sm">
-            <h2 className="text-2xl font-black text-slate-900 mb-5">
-              Club Details
-            </h2>
-
-            <form onSubmit={handleProfileSave} className="space-y-4">
-              <div>
-                <label className="block text-sm font-semibold text-slate-700 mb-1.5">
-                  Club Name
-                </label>
-                <input
-                  value={form.name}
-                  onChange={(e) =>
-                    setForm((prev) => ({ ...prev, name: e.target.value }))
-                  }
-                  className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-semibold text-slate-700 mb-1.5">
-                  Description
-                </label>
-                <textarea
-                  rows="5"
-                  value={form.description}
-                  onChange={(e) =>
-                    setForm((prev) => ({
-                      ...prev,
-                      description: e.target.value,
-                    }))
-                  }
-                  className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-semibold text-slate-700 mb-1.5">
-                  Category
-                </label>
-                <select
-                  value={form.category}
-                  onChange={(e) =>
-                    setForm((prev) => ({ ...prev, category: e.target.value }))
-                  }
-                  className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm"
-                >
-                  {categories.map((category) => (
-                    <option key={category} value={category}>
-                      {category}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-sm font-semibold text-slate-700 mb-1.5">
-                  Tags
-                </label>
-                <input
-                  value={form.tags}
-                  onChange={(e) =>
-                    setForm((prev) => ({ ...prev, tags: e.target.value }))
-                  }
-                  placeholder="Comma separated tags"
-                  className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm"
-                />
-              </div>
-
-              <button
-                type="submit"
-                disabled={savingProfile}
-                className="inline-flex items-center gap-2 px-5 py-3 rounded-xl bg-slate-900 text-white font-semibold hover:bg-slate-800 disabled:opacity-60"
-              >
-                <Save size={16} />
-                {savingProfile ? "Saving..." : "Save Changes"}
-              </button>
-            </form>
-          </div>
-
-          <div className="bg-white rounded-3xl border border-slate-200 p-6 shadow-sm">
-            <h2 className="text-2xl font-black text-slate-900 mb-5">
-              Constitution
-            </h2>
-
-            {club?.constitution?.fileName && (
-              <div className="mb-4 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700">
-                <div className="flex items-center justify-between gap-3">
-                  <span>{club.constitution.fileName}</span>
-                  {constitutionDownloadUrl && (
-                    <a
-                      href={constitutionDownloadUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center gap-2 rounded-xl border border-indigo-200 bg-indigo-50 px-4 py-2 font-semibold text-indigo-700 hover:bg-indigo-100"
-                    >
-                      <Download size={16} />
-                      Download
-                    </a>
-                  )}
-                </div>
-              </div>
-            )}
-
-            {constitutionMessage && (
-              <p className="mb-4 text-sm font-semibold text-indigo-600">
-                {constitutionMessage}
-              </p>
-            )}
-
-            <form onSubmit={handleConstitutionUpload} className="space-y-4">
-              <div>
-                <label className="block text-sm font-semibold text-slate-700 mb-1.5">
-                  Upload New Constitution (PDF only)
-                </label>
-                <input
-                  type="file"
-                  accept="application/pdf"
-                  onChange={(e) =>
-                    setConstitutionFile(e.target.files?.[0] || null)
-                  }
-                  className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm"
-                />
-              </div>
-
-              <button
-                type="submit"
-                disabled={uploadingConstitution}
-                className="inline-flex items-center gap-2 px-5 py-3 rounded-xl bg-indigo-600 text-white font-semibold hover:bg-indigo-700 disabled:opacity-60"
-              >
-                <Upload size={16} />
-                {uploadingConstitution ? "Uploading..." : "Upload Constitution"}
-              </button>
-            </form>
-          </div>
-        </div>
+      {activeTab === "settings" && (
+        <ClubSettingsTab club={club} onClubUpdated={loadData} />
       )}
     </div>
   );

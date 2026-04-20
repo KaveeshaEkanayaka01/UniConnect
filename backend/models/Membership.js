@@ -1,34 +1,44 @@
 import mongoose from "mongoose";
 
-const membershipSchema = new mongoose.Schema({
-  user: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: "User",
-    required: true
+const membershipSchema = new mongoose.Schema(
+  {
+    club: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Club",
+      required: true,
+    },
+    user: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      required: true,
+    },
+    role: {
+      type: String,
+      enum: [
+        "MEMBER",
+        "PRESIDENT",
+        "VICE_PRESIDENT",
+        "SECRETARY",
+        "ASSISTANT_SECRETARY",
+        "TREASURER",
+        "ASSISTANT_TREASURER",
+        "EVENT_COORDINATOR",
+        "PROJECT_COORDINATOR",
+        "EXECUTIVE_COMMITTEE_MEMBER",
+      ],
+      default: "MEMBER",
+    },
+    status: {
+      type: String,
+      enum: ["PENDING", "APPROVED", "REJECTED"],
+      default: "PENDING",
+    },
   },
-  club: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: "Club",
-    required: true
-  },
-  role: {
-    type: String,
-    enum: [
-      "president", "vice_president", "treasurer", "secretary", "event_coordinator",
-      "marketing_chair", "social_media_manager", "fundraising_chair", "public_relations_chair",
-      "volunteer_coordinator", "alumni_relations_chair", "club_admin", "member"
-    ],
-    default: "member"
-  },
-  status: {
-    type: String,
-    enum: ["pending", "approved", "rejected"],
-    default: "pending"
-  },
-  joinedAt: {
-    type: Date,
-    default: Date.now
-  }
-});
+  { timestamps: true }
+);
 
-export default mongoose.model("Membership", membershipSchema);
+membershipSchema.index({ club: 1, user: 1 }, { unique: true });
+
+const Membership = mongoose.model("Membership", membershipSchema);
+
+export default Membership;

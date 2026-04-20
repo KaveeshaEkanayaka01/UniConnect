@@ -3,47 +3,64 @@ import Expense from "../models/Expense.js";
 import Club from "../models/Club.js";
 
 const SYSTEM_ADMIN = "SYSTEM_ADMIN";
+
+const ROLE_ALIASES = {
+  EXECUTIVE: "EXECUTIVE_COMMITTEE_MEMBER",
+};
+
 const MANAGE_ROLES = [
   "PRESIDENT",
   "VICE_PRESIDENT",
   "TREASURER",
   "SECRETARY",
-  "EXECUTIVE",
   "ASSISTANT_SECRETARY",
   "ASSISTANT_TREASURER",
+  "EVENT_COORDINATOR",
+  "PROJECT_COORDINATOR",
+  "EXECUTIVE_COMMITTEE_MEMBER",
 ];
 
-const normalizeRole = (role) => String(role || "").trim().toUpperCase();
+const normalizeRole = (role) => {
+  const normalized = String(role || "")
+    .trim()
+    .replace(/\s+/g, "_")
+    .toUpperCase();
+
+  return ROLE_ALIASES[normalized] || normalized;
+};
 
 const isValidObjectId = (id) => mongoose.Types.ObjectId.isValid(id);
 
-const getClubMemberRole = (club, userId) => {
+const sameId = (a, b) => String(a?._id || a) === String(b?._id || b);
+
+const getActiveClubMember = (club, userId) => {
   if (!club?.members?.length || !userId) return null;
 
-  const member = club.members.find((m) => {
+  return club.members.find((member) => {
     const memberUserId =
-      m?.user?._id?.toString?.() ||
-      m?.user?.toString?.() ||
-      m?._id?.toString?.() ||
-      m?.memberId?.toString?.();
+      member?.user?._id?.toString?.() ||
+      member?.user?.toString?.() ||
+      member?._id?.toString?.() ||
+      member?.memberId?.toString?.();
 
-    return (
-      String(memberUserId) === String(userId) &&
-      String(m?.status || "").toLowerCase() === "active"
-    );
+    const status = String(member?.status || "").trim().toLowerCase();
+
+    return String(memberUserId) === String(userId) && ["active", "approved"].includes(status);
   });
-
-  return normalizeRole(
-    member?.role || member?.memberRole || member?.position || ""
-  );
 };
+
+const isAssignedClubAdminForClub = (club, userId) =>
+  Boolean(club?.clubAdmin?.user && sameId(club.clubAdmin.user, userId));
 
 const canManageClubExpenses = (user, club) => {
   const userRole = normalizeRole(user?.role);
 
-  if (userRole === SYSTEM_ADMIN) return true;
+  if (userRole === SYSTEM_ADMIN) return false;
+  if (isAssignedClubAdminForClub(club, user?._id)) return true;
+  if (club?.president?.user && sameId(club.president.user, user?._id)) return true;
 
-  const memberRole = getClubMemberRole(club, user?._id);
+  const member = getActiveClubMember(club, user?._id);
+  const memberRole = normalizeRole(member?.role || member?.memberRole || member?.position || "");
   return MANAGE_ROLES.includes(memberRole);
 };
 
@@ -51,11 +68,10 @@ const canViewClubExpenses = (user, club) => {
   const userRole = normalizeRole(user?.role);
 
   if (userRole === SYSTEM_ADMIN) return true;
+  if (isAssignedClubAdminForClub(club, user?._id)) return true;
 
-  const memberRole = getClubMemberRole(club, user?._id);
-
-  // allow any active club member to view expenses
-  return Boolean(memberRole);
+  const member = getActiveClubMember(club, user?._id);
+  return Boolean(member);
 };
 
 const validateUploadedReceipt = (file) => {
@@ -122,11 +138,7 @@ const validateExpensePayload = (body, isUpdate = false) => {
   }
 
   if (!isUpdate || "amount" in body) {
-    if (
-      body.amount === undefined ||
-      body.amount === null ||
-      body.amount === ""
-    ) {
+    if (body.amount === undefined || body.amount === null || body.amount === "") {
       errors.amount = "Amount is required";
     } else if (Number.isNaN(amount) || amount <= 0) {
       errors.amount = "Amount must be greater than 0";
@@ -152,14 +164,7 @@ const validateExpensePayload = (body, isUpdate = false) => {
     errors.vendor = "Vendor name cannot exceed 100 characters";
   }
 
-  const allowedPaymentMethods = [
-    "",
-    "Cash",
-    "Bank Transfer",
-    "Card",
-    "Online Payment",
-    "Other",
-  ];
+  const allowedPaymentMethods = ["", "Cash", "Bank Transfer", "Card", "Online Payment", "Other"];
 
   if (paymentMethod && !allowedPaymentMethods.includes(paymentMethod)) {
     errors.paymentMethod = "Invalid payment method";
@@ -172,9 +177,6 @@ const validateExpensePayload = (body, isUpdate = false) => {
   return errors;
 };
 
-// @desc    Get all expenses for a club
-// @route   GET /api/expenses/club/:clubId
-// @access  Protected
 export const getClubExpenses = async (req, res) => {
   try {
     const { clubId } = req.params;
@@ -183,11 +185,7 @@ export const getClubExpenses = async (req, res) => {
       return res.status(400).json({ message: "Invalid club ID" });
     }
 
-    const club = await Club.findById(clubId).populate(
-      "members.user",
-      "name email role"
-    );
-
+    const club = await Club.findById(clubId).populate("members.user", "name email role");
     if (!club) {
       return res.status(404).json({ message: "Club not found" });
     }
@@ -199,8 +197,8 @@ export const getClubExpenses = async (req, res) => {
     }
 
     const expenses = await Expense.find({ club: clubId })
-      .populate("createdBy", "name email role")
-      .populate("updatedBy", "name email role")
+      .populate("createdBy", "name fullName email role")
+      .populate("updatedBy", "name fullName email role")
       .sort({ expenseDate: -1, createdAt: -1 });
 
     return res.status(200).json(expenses);
@@ -213,9 +211,6 @@ export const getClubExpenses = async (req, res) => {
   }
 };
 
-// @desc    Get single expense
-// @route   GET /api/expenses/:expenseId
-// @access  Protected
 export const getExpenseById = async (req, res) => {
   try {
     const { expenseId } = req.params;
@@ -225,13 +220,13 @@ export const getExpenseById = async (req, res) => {
     }
 
     const expense = await Expense.findById(expenseId)
-      .populate("createdBy", "name email role")
-      .populate("updatedBy", "name email role")
+      .populate("createdBy", "name fullName email role")
+      .populate("updatedBy", "name fullName email role")
       .populate({
         path: "club",
         populate: {
           path: "members.user",
-          select: "name email role",
+          select: "name fullName email role",
         },
       });
 
@@ -240,9 +235,7 @@ export const getExpenseById = async (req, res) => {
     }
 
     if (!canViewClubExpenses(req.user, expense.club)) {
-      return res.status(403).json({
-        message: "You are not authorized to view this expense",
-      });
+      return res.status(403).json({ message: "You are not authorized to view this expense" });
     }
 
     return res.status(200).json(expense);
@@ -255,21 +248,9 @@ export const getExpenseById = async (req, res) => {
   }
 };
 
-// @desc    Create expense
-// @route   POST /api/expenses
-// @access  Protected
 export const createExpense = async (req, res) => {
   try {
-    const {
-      clubId,
-      title,
-      category,
-      amount,
-      expenseDate,
-      vendor,
-      paymentMethod,
-      description,
-    } = req.body;
+    const { clubId, title, category, amount, expenseDate, vendor, paymentMethod, description } = req.body;
 
     if (!clubId || !isValidObjectId(clubId)) {
       return res.status(400).json({ message: "Valid clubId is required" });
@@ -278,22 +259,13 @@ export const createExpense = async (req, res) => {
     const validationErrors = validateExpensePayload(req.body);
     const receiptError = validateUploadedReceipt(req.file);
 
-    if (receiptError) {
-      validationErrors.receipt = receiptError;
-    }
+    if (receiptError) validationErrors.receipt = receiptError;
 
     if (Object.keys(validationErrors).length > 0) {
-      return res.status(400).json({
-        message: "Validation failed",
-        errors: validationErrors,
-      });
+      return res.status(400).json({ message: "Validation failed", errors: validationErrors });
     }
 
-    const club = await Club.findById(clubId).populate(
-      "members.user",
-      "name email role"
-    );
-
+    const club = await Club.findById(clubId).populate("members.user", "name email role");
     if (!club) {
       return res.status(404).json({ message: "Club not found" });
     }
@@ -320,8 +292,8 @@ export const createExpense = async (req, res) => {
     });
 
     const populatedExpense = await Expense.findById(newExpense._id)
-      .populate("createdBy", "name email role")
-      .populate("updatedBy", "name email role");
+      .populate("createdBy", "name fullName email role")
+      .populate("updatedBy", "name fullName email role");
 
     return res.status(201).json({
       message: "Expense created successfully",
@@ -336,9 +308,6 @@ export const createExpense = async (req, res) => {
   }
 };
 
-// @desc    Update expense
-// @route   PUT /api/expenses/:expenseId
-// @access  Protected
 export const updateExpense = async (req, res) => {
   try {
     const { expenseId } = req.params;
@@ -350,22 +319,17 @@ export const updateExpense = async (req, res) => {
     const validationErrors = validateExpensePayload(req.body, true);
     const receiptError = validateUploadedReceipt(req.file);
 
-    if (receiptError) {
-      validationErrors.receipt = receiptError;
-    }
+    if (receiptError) validationErrors.receipt = receiptError;
 
     if (Object.keys(validationErrors).length > 0) {
-      return res.status(400).json({
-        message: "Validation failed",
-        errors: validationErrors,
-      });
+      return res.status(400).json({ message: "Validation failed", errors: validationErrors });
     }
 
     const expense = await Expense.findById(expenseId).populate({
       path: "club",
       populate: {
         path: "members.user",
-        select: "name email role",
+        select: "name fullName email role",
       },
     });
 
@@ -382,29 +346,21 @@ export const updateExpense = async (req, res) => {
     if (req.body.title !== undefined) expense.title = req.body.title.trim();
     if (req.body.category !== undefined) expense.category = req.body.category;
     if (req.body.amount !== undefined) expense.amount = Number(req.body.amount);
-    if (req.body.expenseDate !== undefined) {
-      expense.expenseDate = req.body.expenseDate;
-    }
-    if (req.body.vendor !== undefined) {
-      expense.vendor = req.body.vendor?.trim?.() || "";
-    }
-    if (req.body.paymentMethod !== undefined) {
-      expense.paymentMethod = req.body.paymentMethod || "";
-    }
-    if (req.body.description !== undefined) {
-      expense.description = req.body.description?.trim?.() || "";
-    }
-    if (req.file) {
-      expense.receiptUrl = `/uploads/${req.file.filename}`;
-    }
+    if (req.body.expenseDate !== undefined) expense.expenseDate = req.body.expenseDate;
+    if (req.body.vendor !== undefined) expense.vendor = req.body.vendor?.trim?.() || "";
+    if (req.body.paymentMethod !== undefined) expense.paymentMethod = req.body.paymentMethod || "";
+    if (req.body.description !== undefined) expense.description = req.body.description?.trim?.() || "";
+    if (req.file) expense.receiptUrl = `/uploads/${req.file.filename}`;
 
+    expense.status = "pending";
+    expense.rejectionReason = "";
     expense.updatedBy = req.user._id;
 
     await expense.save();
 
     const updatedExpense = await Expense.findById(expense._id)
-      .populate("createdBy", "name email role")
-      .populate("updatedBy", "name email role");
+      .populate("createdBy", "name fullName email role")
+      .populate("updatedBy", "name fullName email role");
 
     return res.status(200).json({
       message: "Expense updated successfully",
@@ -419,9 +375,6 @@ export const updateExpense = async (req, res) => {
   }
 };
 
-// @desc    Delete expense
-// @route   DELETE /api/expenses/:expenseId
-// @access  Protected
 export const deleteExpense = async (req, res) => {
   try {
     const { expenseId } = req.params;
@@ -434,7 +387,7 @@ export const deleteExpense = async (req, res) => {
       path: "club",
       populate: {
         path: "members.user",
-        select: "name email role",
+        select: "name fullName email role",
       },
     });
 
@@ -443,16 +396,12 @@ export const deleteExpense = async (req, res) => {
     }
 
     if (!canManageClubExpenses(req.user, expense.club)) {
-      return res.status(403).json({
-        message: "You are not authorized to delete this expense",
-      });
+      return res.status(403).json({ message: "You are not authorized to delete this expense" });
     }
 
     await expense.deleteOne();
 
-    return res.status(200).json({
-      message: "Expense deleted successfully",
-    });
+    return res.status(200).json({ message: "Expense deleted successfully" });
   } catch (error) {
     console.error("deleteExpense error:", error);
     return res.status(500).json({
@@ -462,23 +411,18 @@ export const deleteExpense = async (req, res) => {
   }
 };
 
-// @desc    Get all expenses in system
-// @route   GET /api/expenses/all
-// @access  Protected / SYSTEM_ADMIN
 export const getAllExpenses = async (req, res) => {
   try {
     const userRole = normalizeRole(req.user?.role);
 
     if (userRole !== SYSTEM_ADMIN) {
-      return res.status(403).json({
-        message: "Only system admins can view all expenses",
-      });
+      return res.status(403).json({ message: "Only system admins can view all expenses" });
     }
 
     const expenses = await Expense.find({})
       .populate("club", "name status")
-      .populate("createdBy", "name email role")
-      .populate("updatedBy", "name email role")
+      .populate("createdBy", "name fullName email role")
+      .populate("updatedBy", "name fullName email role")
       .sort({ createdAt: -1 });
 
     return res.status(200).json(expenses);
@@ -491,9 +435,6 @@ export const getAllExpenses = async (req, res) => {
   }
 };
 
-// @desc    Approve expense
-// @route   PUT /api/expenses/:expenseId/approve
-// @access  Protected / SYSTEM_ADMIN
 export const approveExpense = async (req, res) => {
   try {
     const { expenseId } = req.params;
@@ -504,13 +445,10 @@ export const approveExpense = async (req, res) => {
 
     const userRole = normalizeRole(req.user?.role);
     if (userRole !== SYSTEM_ADMIN) {
-      return res.status(403).json({
-        message: "Only system admins can approve expenses",
-      });
+      return res.status(403).json({ message: "Only system admins can approve expenses" });
     }
 
     const expense = await Expense.findById(expenseId);
-
     if (!expense) {
       return res.status(404).json({ message: "Expense not found" });
     }
@@ -522,8 +460,8 @@ export const approveExpense = async (req, res) => {
     await expense.save();
 
     const updatedExpense = await Expense.findById(expense._id)
-      .populate("createdBy", "name email role")
-      .populate("updatedBy", "name email role");
+      .populate("createdBy", "name fullName email role")
+      .populate("updatedBy", "name fullName email role");
 
     return res.status(200).json({
       message: "Expense approved successfully",
@@ -538,9 +476,6 @@ export const approveExpense = async (req, res) => {
   }
 };
 
-// @desc    Reject expense
-// @route   PUT /api/expenses/:expenseId/reject
-// @access  Protected / SYSTEM_ADMIN
 export const rejectExpense = async (req, res) => {
   try {
     const { expenseId } = req.params;
@@ -552,13 +487,10 @@ export const rejectExpense = async (req, res) => {
 
     const userRole = normalizeRole(req.user?.role);
     if (userRole !== SYSTEM_ADMIN) {
-      return res.status(403).json({
-        message: "Only system admins can reject expenses",
-      });
+      return res.status(403).json({ message: "Only system admins can reject expenses" });
     }
 
     const expense = await Expense.findById(expenseId);
-
     if (!expense) {
       return res.status(404).json({ message: "Expense not found" });
     }
@@ -570,8 +502,8 @@ export const rejectExpense = async (req, res) => {
     await expense.save();
 
     const updatedExpense = await Expense.findById(expense._id)
-      .populate("createdBy", "name email role")
-      .populate("updatedBy", "name email role");
+      .populate("createdBy", "name fullName email role")
+      .populate("updatedBy", "name fullName email role");
 
     return res.status(200).json({
       message: "Expense rejected successfully",

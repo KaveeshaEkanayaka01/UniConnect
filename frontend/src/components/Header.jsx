@@ -18,7 +18,9 @@ const Header = ({ onToggleSidebar, userName, avatar, pageTitle, onLogout }) => {
     }
   })();
 
-  const displayName = userName || storedUser.fullName || storedUser.name || "User";
+  const displayName =
+    userName || storedUser.fullName || storedUser.name || "User";
+
   const avatarUrl = avatar || generateAvatarUrl(displayName);
 
   const getResolvedTitle = () => {
@@ -46,6 +48,12 @@ const Header = ({ onToggleSidebar, userName, avatar, pageTitle, onLogout }) => {
       return "Club Dashboard";
     }
 
+    // 🔥 FIX: REMOVE EVENT ID FROM URL
+    if (path.startsWith("/event/")) {
+      return "Event";
+    }
+
+    // fallback (for other routes)
     return path
       .replace("/", "")
       .split("-")
@@ -71,6 +79,7 @@ const Header = ({ onToggleSidebar, userName, avatar, pageTitle, onLogout }) => {
             <Sparkles size={10} />
             <span>Workspace</span>
           </div>
+
           <h2 className="text-xl font-extrabold text-slate-900 tracking-tight leading-none mt-0.5">
             {resolvedTitle}
           </h2>
@@ -104,7 +113,9 @@ const Header = ({ onToggleSidebar, userName, avatar, pageTitle, onLogout }) => {
           </div>
 
           <div className="hidden lg:block text-left">
-            <p className="text-xs font-bold text-slate-800 leading-none">{displayName}</p>
+            <p className="text-xs font-bold text-slate-800 leading-none">
+              {displayName}
+            </p>
             <p className="text-[10px] font-semibold text-emerald-500 uppercase tracking-tight mt-0.5">
               Online
             </p>

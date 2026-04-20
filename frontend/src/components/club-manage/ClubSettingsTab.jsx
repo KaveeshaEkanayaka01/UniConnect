@@ -1,6 +1,17 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { Save, Upload, FileText, Download, Lock } from "lucide-react";
-import { updateClub, uploadClubConstitution } from "../../api/clubApi";
+import {
+  Save,
+  Upload,
+  FileText,
+  Download,
+  Lock,
+  Image as ImageIcon,
+} from "lucide-react";
+import {
+  updateClubProfile,
+  uploadClubConstitution,
+  updateClubLogo,
+} from "../../services/clubService";
 
 const categories = [
   "Engineering",
@@ -46,8 +57,17 @@ const managerRoles = [
   "assistant_treasurer",
   "event_coordinator",
   "project_coordinator",
-  "executive",
+  "executive_committee_member",
 ];
+
+const getImageSrc = (imageUrl) => {
+  if (!imageUrl) return "";
+  if (/^https?:\/\//i.test(imageUrl)) return imageUrl;
+
+  return imageUrl.startsWith("/")
+    ? `${API_BASE_URL}${imageUrl}`
+    : `${API_BASE_URL}/${imageUrl}`;
+};
 
 const ClubSettingsTab = ({ club, onClubUpdated }) => {
   const [formData, setFormData] = useState({
@@ -58,12 +78,15 @@ const ClubSettingsTab = ({ club, onClubUpdated }) => {
   });
 
   const [constitutionFile, setConstitutionFile] = useState(null);
+  const [logoFile, setLogoFile] = useState(null);
 
   const [loading, setLoading] = useState(false);
   const [constitutionLoading, setConstitutionLoading] = useState(false);
+  const [logoLoading, setLogoLoading] = useState(false);
 
   const [message, setMessage] = useState("");
   const [constitutionMessage, setConstitutionMessage] = useState("");
+  const [logoMessage, setLogoMessage] = useState("");
 
   const [errors, setErrors] = useState({});
 
@@ -74,7 +97,9 @@ const ClubSettingsTab = ({ club, onClubUpdated }) => {
   const canManageSettings = useMemo(() => {
     if (!club || !currentUserId) return false;
 
-    if (userRole === "system_admin") return true;
+    if (String(currentUser?.role || "").trim().toUpperCase() === "SYSTEM_ADMIN") {
+      return true;
+    }
 
     if (club?.clubAdmin?.user && sameId(club.clubAdmin.user, currentUserId)) {
       return true;
@@ -91,12 +116,12 @@ const ClubSettingsTab = ({ club, onClubUpdated }) => {
 
         return (
           String(memberUserId) === String(currentUserId) &&
-          normalizeText(member?.status) === "active"
+          normalizeText(member?.status) === "approved"
         );
       }) || null;
 
     return managerRoles.includes(normalizeText(membership?.role));
-  }, [club, currentUserId, userRole]);
+  }, [club, currentUser, currentUserId, userRole]);
 
   useEffect(() => {
     if (club) {
@@ -170,7 +195,7 @@ const ClubSettingsTab = ({ club, onClubUpdated }) => {
           .filter(Boolean),
       };
 
-      const res = await updateClub(club._id, payload);
+      const res = await updateClubProfile(club._id, payload);
 
       setMessage(res?.message || "Club details updated successfully");
 
@@ -233,6 +258,57 @@ const ClubSettingsTab = ({ club, onClubUpdated }) => {
     }
   };
 
+  const handleLogoUpload = async (e) => {
+    e.preventDefault();
+
+    if (!canManageSettings) {
+      setLogoMessage("You are not allowed to update the club logo.");
+      return;
+    }
+
+    setLogoMessage("");
+
+    if (!logoFile) {
+      setLogoMessage("Please select an image file");
+      return;
+    }
+
+    const allowedImageTypes = [
+      "image/jpeg",
+      "image/jpg",
+      "image/png",
+      "image/webp",
+    ];
+
+    if (!allowedImageTypes.includes(logoFile.type)) {
+      setLogoMessage("Only JPG, JPEG, PNG, and WEBP image files are allowed");
+      return;
+    }
+
+    try {
+      setLogoLoading(true);
+
+      const form = new FormData();
+      form.append("logo", logoFile);
+
+      const res = await updateClubLogo(club._id, form);
+
+      setLogoMessage(res?.message || "Club logo uploaded successfully");
+      setLogoFile(null);
+
+      if (onClubUpdated) {
+        onClubUpdated();
+      }
+    } catch (error) {
+      console.error("Error uploading logo:", error);
+      setLogoMessage(
+        error?.response?.data?.message || "Failed to upload club logo"
+      );
+    } finally {
+      setLogoLoading(false);
+    }
+  };
+
   const constitutionDownloadUrl = club?._id
     ? `${API_BASE_URL}/api/clubs/${club._id}/constitution/download`
     : null;
@@ -240,32 +316,33 @@ const ClubSettingsTab = ({ club, onClubUpdated }) => {
   return (
     <div className="space-y-6">
       {!canManageSettings && (
-        <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800 flex items-start gap-2">
-          <Lock size={16} className="mt-0.5" />
+        <div className="rounded-2xl border border-[#0B1E8A]/10 bg-[#0B1E8A]/5 px-4 py-3 text-sm text-gray-600 flex items-start gap-2">
+          <Lock size={16} className="mt-0.5 text-[#F36C21]" />
           <span>
             You can view club settings information, but you are not allowed to
-            edit club details or upload a constitution for this club.
+            edit club details, upload a logo, or upload a constitution for this
+            club.
           </span>
         </div>
       )}
 
-      <div className="bg-white rounded-2xl border shadow-sm p-6">
-        <h2 className="text-2xl font-bold text-slate-900 mb-1">
+      <div className="bg-white rounded-2xl border border-[#0B1E8A]/10 shadow-sm p-6">
+        <h2 className="text-2xl font-bold text-[#0B1E8A] mb-1">
           Club Settings
         </h2>
-        <p className="text-sm text-slate-500 mb-6">
-          Update the club details and constitution.
+        <p className="text-sm text-gray-600 mb-6">
+          Update the club details.
         </p>
 
         {message && (
-          <div className="mb-4 rounded-xl bg-slate-100 px-4 py-3 text-sm text-slate-700">
+          <div className="mb-4 rounded-xl bg-[#F36C21]/10 px-4 py-3 text-sm text-[#F36C21] border border-[#F36C21]/20">
             {message}
           </div>
         )}
 
         <form onSubmit={handleSaveDetails} className="space-y-5">
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">
+            <label className="block text-sm font-medium text-gray-600 mb-1">
               Club Name
             </label>
             <input
@@ -274,44 +351,42 @@ const ClubSettingsTab = ({ club, onClubUpdated }) => {
               value={formData.name}
               onChange={handleChange}
               disabled={!canManageSettings}
-              className={`w-full rounded-xl border px-4 py-2.5 focus:outline-none focus:ring-2 disabled:bg-slate-50 disabled:text-slate-500 ${
+              className={`w-full rounded-xl border px-4 py-2.5 bg-white text-[#0B1E8A] focus:outline-none focus:ring-2 disabled:bg-[#0B1E8A]/5 disabled:text-gray-500 ${
                 errors.name
-                  ? "border-rose-300 focus:ring-rose-100"
-                  : "border-slate-200 focus:ring-indigo-200"
+                  ? "border-red-300 focus:ring-red-100"
+                  : "border-[#0B1E8A]/15 focus:ring-[#F36C21]/30"
               }`}
               placeholder="Enter club name"
             />
             {errors.name && (
-              <p className="mt-1 text-sm text-rose-600">{errors.name}</p>
+              <p className="mt-1 text-sm text-red-600">{errors.name}</p>
             )}
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">
+            <label className="block text-sm font-medium text-gray-600 mb-1">
               Description
             </label>
             <textarea
-              rows="4"
               name="description"
               value={formData.description}
               onChange={handleChange}
               disabled={!canManageSettings}
-              className={`w-full rounded-xl border px-4 py-2.5 focus:outline-none focus:ring-2 disabled:bg-slate-50 disabled:text-slate-500 ${
+              rows={5}
+              className={`w-full rounded-xl border px-4 py-2.5 bg-white text-[#0B1E8A] focus:outline-none focus:ring-2 disabled:bg-[#0B1E8A]/5 disabled:text-gray-500 ${
                 errors.description
-                  ? "border-rose-300 focus:ring-rose-100"
-                  : "border-slate-200 focus:ring-indigo-200"
+                  ? "border-red-300 focus:ring-red-100"
+                  : "border-[#0B1E8A]/15 focus:ring-[#F36C21]/30"
               }`}
               placeholder="Enter club description"
             />
             {errors.description && (
-              <p className="mt-1 text-sm text-rose-600">
-                {errors.description}
-              </p>
+              <p className="mt-1 text-sm text-red-600">{errors.description}</p>
             )}
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">
+            <label className="block text-sm font-medium text-gray-600 mb-1">
               Category
             </label>
             <select
@@ -319,10 +394,10 @@ const ClubSettingsTab = ({ club, onClubUpdated }) => {
               value={formData.category}
               onChange={handleChange}
               disabled={!canManageSettings}
-              className={`w-full rounded-xl border px-4 py-2.5 focus:outline-none focus:ring-2 disabled:bg-slate-50 disabled:text-slate-500 ${
+              className={`w-full rounded-xl border px-4 py-2.5 bg-white text-[#0B1E8A] focus:outline-none focus:ring-2 disabled:bg-[#0B1E8A]/5 disabled:text-gray-500 ${
                 errors.category
-                  ? "border-rose-300 focus:ring-rose-100"
-                  : "border-slate-200 focus:ring-indigo-200"
+                  ? "border-red-300 focus:ring-red-100"
+                  : "border-[#0B1E8A]/15 focus:ring-[#F36C21]/30"
               }`}
             >
               {categories.map((category) => (
@@ -332,12 +407,12 @@ const ClubSettingsTab = ({ club, onClubUpdated }) => {
               ))}
             </select>
             {errors.category && (
-              <p className="mt-1 text-sm text-rose-600">{errors.category}</p>
+              <p className="mt-1 text-sm text-red-600">{errors.category}</p>
             )}
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">
+            <label className="block text-sm font-medium text-gray-600 mb-1">
               Tags
             </label>
             <input
@@ -346,78 +421,114 @@ const ClubSettingsTab = ({ club, onClubUpdated }) => {
               value={formData.tags}
               onChange={handleChange}
               disabled={!canManageSettings}
-              className="w-full rounded-xl border border-slate-200 px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-indigo-200 disabled:bg-slate-50 disabled:text-slate-500"
-              placeholder="e.g. coding, innovation, research"
+              className="w-full rounded-xl border border-[#0B1E8A]/15 px-4 py-2.5 bg-white text-[#0B1E8A] focus:outline-none focus:ring-2 focus:ring-[#F36C21]/30 disabled:bg-[#0B1E8A]/5 disabled:text-gray-500"
+              placeholder="e.g. innovation, leadership, technology"
             />
-            <p className="mt-1 text-xs text-slate-500">
+            <p className="mt-1 text-xs text-gray-500">
               Separate multiple tags with commas.
             </p>
           </div>
 
-          {canManageSettings && (
-            <button
-              type="submit"
-              disabled={loading}
-              className="inline-flex items-center gap-2 rounded-xl bg-indigo-600 px-5 py-3 text-white font-semibold hover:bg-indigo-700 disabled:opacity-60"
-            >
-              <Save size={16} />
-              {loading ? "Saving..." : "Save Details"}
-            </button>
-          )}
+          <button
+            type="submit"
+            disabled={loading || !canManageSettings}
+            className="inline-flex items-center gap-2 rounded-xl bg-[#0B1E8A] px-5 py-2.5 text-white font-semibold hover:bg-[#08156b] disabled:opacity-60"
+          >
+            <Save size={16} />
+            {loading ? "Saving..." : "Save Changes"}
+          </button>
         </form>
       </div>
 
-      <div className="bg-white rounded-2xl border shadow-sm p-6">
-        <div className="flex items-center gap-2 mb-2">
-          <FileText size={18} className="text-indigo-600" />
-          <h3 className="text-xl font-bold text-slate-900">Constitution</h3>
+      <div className="bg-white rounded-2xl border border-[#0B1E8A]/10 shadow-sm p-6">
+        <div className="flex items-center gap-2 mb-4">
+          <ImageIcon size={18} className="text-[#F36C21]" />
+          <h2 className="text-2xl font-bold text-[#0B1E8A]">Club Logo</h2>
         </div>
-        <p className="text-sm text-slate-500 mb-5">
+
+        {club?.logo && (
+          <div className="mb-4">
+            <img
+              src={getImageSrc(club.logo)}
+              alt={`${club?.name || "Club"} logo`}
+              className="h-28 w-28 rounded-2xl object-cover border border-[#0B1E8A]/10"
+            />
+          </div>
+        )}
+
+        {logoMessage && (
+          <div className="mb-4 rounded-xl bg-[#F36C21]/10 px-4 py-3 text-sm text-[#F36C21] border border-[#F36C21]/20">
+            {logoMessage}
+          </div>
+        )}
+
+        <form onSubmit={handleLogoUpload} className="space-y-4">
+          <input
+            type="file"
+            accept="image/jpeg,image/jpg,image/png,image/webp"
+            onChange={(e) => setLogoFile(e.target.files?.[0] || null)}
+            disabled={!canManageSettings}
+            className="block w-full text-sm text-gray-600 file:mr-4 file:rounded-xl file:border-0 file:bg-[#0B1E8A]/5 file:px-4 file:py-2 file:font-semibold file:text-[#0B1E8A] hover:file:bg-[#0B1E8A]/10 disabled:opacity-60"
+          />
+
+          <button
+            type="submit"
+            disabled={logoLoading || !canManageSettings}
+            className="inline-flex items-center gap-2 rounded-xl bg-[#F36C21] px-5 py-2.5 text-white font-semibold hover:bg-orange-600 disabled:opacity-60"
+          >
+            <Upload size={16} />
+            {logoLoading ? "Uploading..." : "Upload Logo"}
+          </button>
+        </form>
+      </div>
+
+      <div className="bg-white rounded-2xl border border-[#0B1E8A]/10 shadow-sm p-6">
+        <div className="flex items-center gap-2 mb-2">
+          <FileText size={18} className="text-[#F36C21]" />
+          <h2 className="text-2xl font-bold text-[#0B1E8A]">
+            Club Constitution
+          </h2>
+        </div>
+
+        <p className="text-sm text-gray-600 mb-6">
           Upload a PDF constitution file for this club.
         </p>
 
-        {constitutionDownloadUrl && (
-          <a
-            href={constitutionDownloadUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="mb-5 inline-flex items-center gap-2 rounded-xl border border-indigo-200 bg-indigo-50 px-4 py-2.5 text-indigo-700 font-semibold hover:bg-indigo-100"
-          >
-            <Download size={16} />
-            Download Current Constitution
-          </a>
-        )}
-
         {constitutionMessage && (
-          <div className="mb-4 rounded-xl bg-slate-100 px-4 py-3 text-sm text-slate-700">
+          <div className="mb-4 rounded-xl bg-[#F36C21]/10 px-4 py-3 text-sm text-[#F36C21] border border-[#F36C21]/20">
             {constitutionMessage}
           </div>
         )}
 
         <form onSubmit={handleConstitutionUpload} className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">
-              Constitution PDF
-            </label>
-            <input
-              type="file"
-              accept="application/pdf"
-              disabled={!canManageSettings}
-              onChange={(e) => setConstitutionFile(e.target.files?.[0] || null)}
-              className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-200 disabled:bg-slate-50 disabled:text-slate-500"
-            />
-          </div>
+          <input
+            type="file"
+            accept="application/pdf"
+            onChange={(e) => setConstitutionFile(e.target.files?.[0] || null)}
+            disabled={!canManageSettings}
+            className="block w-full text-sm text-gray-600 file:mr-4 file:rounded-xl file:border-0 file:bg-[#0B1E8A]/5 file:px-4 file:py-2 file:font-semibold file:text-[#0B1E8A] hover:file:bg-[#0B1E8A]/10 disabled:opacity-60"
+          />
 
-          {canManageSettings && (
-            <button
-              type="submit"
-              disabled={constitutionLoading}
-              className="inline-flex items-center gap-2 rounded-xl bg-slate-900 px-5 py-3 text-white font-semibold hover:bg-slate-800 disabled:opacity-60"
+          {club?.constitution?.fileName && constitutionDownloadUrl && (
+            <a
+              href={constitutionDownloadUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 rounded-xl border border-[#0B1E8A]/15 bg-[#0B1E8A]/5 px-4 py-2.5 text-[#0B1E8A] font-semibold hover:bg-[#0B1E8A]/10"
             >
-              <Upload size={16} />
-              {constitutionLoading ? "Uploading..." : "Upload Constitution"}
-            </button>
+              <Download size={16} />
+              Download Current Constitution
+            </a>
           )}
+
+          <button
+            type="submit"
+            disabled={constitutionLoading || !canManageSettings}
+            className="inline-flex items-center gap-2 rounded-xl bg-[#F36C21] px-5 py-2.5 text-white font-semibold hover:bg-orange-600 disabled:opacity-60"
+          >
+            <Upload size={16} />
+            {constitutionLoading ? "Uploading..." : "Upload Constitution"}
+          </button>
         </form>
       </div>
     </div>

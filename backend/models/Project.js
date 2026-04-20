@@ -5,27 +5,36 @@ const projectSchema = new mongoose.Schema(
     projectName: {
       type: String,
       required: true,
+      trim: true,
     },
-    description: String,
-
+    description: {
+      type: String,
+      default: "",
+      trim: true,
+    },
     images: {
       type: [String],
       validate: [(arr) => arr.length <= 3, "Max 3 images allowed"],
-      default: []
+      default: [],
     },
-
-    category: String,
-
-    clubName: String,
-
-    projectDate: Date,
-
+    category: {
+      type: String,
+      default: "",
+      trim: true,
+    },
+    clubName: {
+      type: String,
+      default: "",
+      trim: true,
+    },
+    projectDate: {
+      type: Date,
+    },
     status: {
       type: String,
       enum: ["Completed", "Ongoing", "Planned"],
       default: "Ongoing",
     },
-
     likes: {
       type: Number,
       default: 0,

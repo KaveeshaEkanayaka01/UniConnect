@@ -18,6 +18,12 @@ const budgetSchema = new mongoose.Schema(
       trim: true,
       maxlength: 1000,
     },
+    category: {
+      type: String,
+      trim: true,
+      default: "General",
+      maxlength: 100,
+    },
     amount: {
       type: Number,
       required: true,
@@ -36,15 +42,27 @@ const budgetSchema = new mongoose.Schema(
     approvedAmount: {
       type: Number,
       min: 0,
+      default: null,
     },
     remarks: {
       type: String,
       trim: true,
       maxlength: 1000,
+      default: "",
+    },
+    rejectionReason: {
+      type: String,
+      trim: true,
+      maxlength: 1000,
+      default: "",
     },
     approvedBy: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
+      default: null,
+    },
+    approvedAt: {
+      type: Date,
       default: null,
     },
   },

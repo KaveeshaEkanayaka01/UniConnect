@@ -4,9 +4,11 @@ import News from '../models/News.js';
 export const createNews = async (req, res) => {
   try {
     const payload = { ...req.body };
+
     if (payload.publishedDate) {
       payload.publishedDate = new Date(payload.publishedDate);
     }
+
     const news = await News.create(payload);
 
     res.status(201).json({
@@ -24,7 +26,6 @@ export const createNews = async (req, res) => {
 // Get All News
 export const getAllNews = async (req, res) => {
   try {
-    // only published news, sorted by publishedDate descending
     const news = await News.find({ isPublished: true }).sort({ publishedDate: -1 });
 
     res.status(200).json({
@@ -47,7 +48,7 @@ export const getSingleNews = async (req, res) => {
     if (!news) {
       return res.status(404).json({
         success: false,
-        message: "News not found",
+        message: 'News not found',
       });
     }
 
@@ -67,19 +68,24 @@ export const getSingleNews = async (req, res) => {
 export const updateNews = async (req, res) => {
   try {
     const payload = { ...req.body };
+
     if (payload.publishedDate) {
       payload.publishedDate = new Date(payload.publishedDate);
     }
+
     const news = await News.findByIdAndUpdate(
       req.params.id,
       payload,
-      { new: true }
+      {
+        returnDocument: 'after',
+        runValidators: true,
+      }
     );
 
     if (!news) {
       return res.status(404).json({
         success: false,
-        message: "News not found",
+        message: 'News not found',
       });
     }
 
@@ -103,13 +109,13 @@ export const deleteNews = async (req, res) => {
     if (!news) {
       return res.status(404).json({
         success: false,
-        message: "News not found",
+        message: 'News not found',
       });
     }
 
     res.status(200).json({
       success: true,
-      message: "Deleted successfully",
+      message: 'Deleted successfully',
     });
   } catch (error) {
     res.status(500).json({

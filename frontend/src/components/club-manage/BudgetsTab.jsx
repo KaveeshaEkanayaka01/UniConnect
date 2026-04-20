@@ -1,18 +1,19 @@
 import React, { useEffect, useMemo, useState } from "react";
 import {
   DollarSign,
-  PlusCircle,
   RefreshCw,
   BadgeCheck,
-  Lock,
   CheckCircle2,
   XCircle,
+  Pencil,
+  X,
 } from "lucide-react";
 import {
   getClubBudgets,
   createBudgetRequest,
   approveBudgetRequest,
   rejectBudgetRequest,
+  updateBudgetRequest,
 } from "../../services/budgetService";
 
 const initialBudgetForm = {
@@ -50,7 +51,7 @@ const budgetCreatorRoles = [
   "assistant_treasurer",
   "event_coordinator",
   "project_coordinator",
-  "executive",
+  "executive_committee_member",
   "club_admin",
 ];
 
@@ -75,13 +76,14 @@ const BudgetsTab = ({ clubId, club, membership, permissions }) => {
   const [message, setMessage] = useState("");
   const [errors, setErrors] = useState({});
   const [budgetForm, setBudgetForm] = useState(initialBudgetForm);
+  const [editingBudgetId, setEditingBudgetId] = useState("");
 
   const currentUser = getCurrentUser();
   const userRole = normalizeText(currentUser?.role);
   const membershipRole = normalizeText(membership?.role);
   const parentRole = normalizeText(membership?.parentRole);
 
-  const isSystemAdmin = userRole === "system_admin";
+  const isSystemAdmin = userRole.toUpperCase() === "SYSTEM_ADMIN";
 
   const canManageBudgets = useMemo(() => {
     if (permissions?.canManageClub) return true;
@@ -172,6 +174,29 @@ const BudgetsTab = ({ clubId, club, membership, permissions }) => {
     return nextErrors;
   };
 
+  const resetForm = () => {
+    setBudgetForm(initialBudgetForm);
+    setErrors({});
+    setEditingBudgetId("");
+  };
+
+  const handleEdit = (budget) => {
+    setEditingBudgetId(budget?._id || "");
+    setBudgetForm({
+      title: budget?.title || "",
+      amount: budget?.amount ?? "",
+      description: budget?.description || "",
+      category: budget?.category || "General",
+    });
+    setErrors({});
+    setMessage("");
+  };
+
+  const handleCancelEdit = () => {
+    resetForm();
+    setMessage("");
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
 
@@ -199,16 +224,23 @@ const BudgetsTab = ({ clubId, club, membership, permissions }) => {
         category: budgetForm.category,
       };
 
-      await createBudgetRequest(payload);
+      if (editingBudgetId) {
+        await updateBudgetRequest(editingBudgetId, payload);
+        setMessage("Budget request updated successfully");
+      } else {
+        await createBudgetRequest(payload);
+        setMessage("Budget request submitted successfully");
+      }
 
-      setMessage("Budget request submitted successfully");
-      setBudgetForm(initialBudgetForm);
-      setErrors({});
+      resetForm();
       await loadBudgets();
     } catch (error) {
-      console.error("Error creating budget request:", error);
+      console.error("Error saving budget request:", error);
       setMessage(
-        error?.response?.data?.message || "Failed to submit budget request"
+        error?.response?.data?.message ||
+          (editingBudgetId
+            ? "Failed to update budget request"
+            : "Failed to submit budget request")
       );
     } finally {
       setSubmitting(false);
@@ -274,61 +306,61 @@ const BudgetsTab = ({ clubId, club, membership, permissions }) => {
 
   return (
     <div className="space-y-6">
-      <div className="bg-white rounded-3xl border border-slate-200 p-6 shadow-sm">
-        <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
+      <div className="bg-white rounded-3xl border border-[#0B1E8A]/10 p-6 shadow-sm">
+        <div className="flex flex-col lg:flex-row justify-between gap-4">
           <div>
-            <div className="inline-flex items-center gap-2 text-indigo-600 font-semibold text-sm">
+            <div className="inline-flex items-center gap-2 text-[#F36C21] font-semibold text-sm">
               <DollarSign size={18} />
               Budget Management
             </div>
 
-            <h2 className="mt-2 text-2xl font-black text-slate-900">
+            <h2 className="mt-2 text-2xl font-black text-[#0B1E8A]">
               {club?.name ? `${club.name} Budget Requests` : "Budget Requests"}
             </h2>
 
-            <p className="mt-2 text-sm text-slate-500 max-w-2xl">
+            <p className="mt-2 text-sm text-gray-600 max-w-2xl">
               {isSystemAdmin
-                ? "Review, approve, or reject submitted budget requests for this club."
-                : "Review submitted budget requests for this club."}
+                ? "Review, approve, or reject submitted budget requests."
+                : "View and manage budget requests."}
             </p>
           </div>
 
           <button
             type="button"
             onClick={loadBudgets}
-            className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border border-slate-200 bg-white text-slate-700 font-semibold hover:bg-slate-50"
+            className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-[#0B1E8A]/20 text-[#0B1E8A] font-semibold hover:bg-[#0B1E8A]/5"
           >
             <RefreshCw size={16} />
             Refresh
           </button>
         </div>
 
-        <div className="mt-6 grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div className="rounded-2xl border border-slate-200 p-4 bg-slate-50">
-            <p className="text-sm text-slate-500">Total Requests</p>
-            <h3 className="mt-2 text-3xl font-black text-slate-900">
+        <div className="mt-6 grid md:grid-cols-3 gap-4">
+          <div className="rounded-2xl border border-[#0B1E8A]/10 p-4 bg-[#0B1E8A]/5">
+            <p className="text-sm text-gray-600">Total Requests</p>
+            <h3 className="text-3xl font-black text-[#0B1E8A]">
               {budgets.length}
             </h3>
           </div>
 
-          <div className="rounded-2xl border border-slate-200 p-4 bg-slate-50">
-            <p className="text-sm text-slate-500">Pending</p>
-            <h3 className="mt-2 text-3xl font-black text-amber-600">
+          <div className="rounded-2xl border border-[#0B1E8A]/10 p-4 bg-[#0B1E8A]/5">
+            <p className="text-sm text-gray-600">Pending</p>
+            <h3 className="text-3xl font-black text-[#F36C21]">
               {pendingCount}
             </h3>
           </div>
 
-          <div className="rounded-2xl border border-slate-200 p-4 bg-slate-50">
-            <p className="text-sm text-slate-500">Approved</p>
-            <h3 className="mt-2 text-3xl font-black text-emerald-600">
+          <div className="rounded-2xl border border-[#0B1E8A]/10 p-4 bg-[#0B1E8A]/5">
+            <p className="text-sm text-gray-600">Approved</p>
+            <h3 className="text-3xl font-black text-[#0B1E8A]">
               {approvedCount}
             </h3>
           </div>
         </div>
 
-        <div className="mt-4 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
-          <div className="flex items-center gap-2 text-slate-700">
-            <BadgeCheck size={16} className="text-indigo-600" />
+        <div className="mt-4 rounded-2xl border border-[#0B1E8A]/10 bg-[#0B1E8A]/5 px-4 py-3">
+          <div className="flex items-center gap-2 text-[#0B1E8A]">
+            <BadgeCheck size={16} className="text-[#F36C21]" />
             <span className="text-sm font-semibold">
               Total requested amount: Rs. {totalRequested.toLocaleString()}
             </span>
@@ -336,122 +368,106 @@ const BudgetsTab = ({ clubId, club, membership, permissions }) => {
         </div>
 
         {message && (
-          <div className="mt-4 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-medium text-slate-700">
+          <div className="mt-4 rounded-xl bg-[#F36C21]/10 text-[#F36C21] px-4 py-3 text-sm font-medium">
             {message}
           </div>
         )}
       </div>
 
       <div
-        className={`grid grid-cols-1 ${
+        className={`grid ${
           canCreateBudgetRequests ? "xl:grid-cols-2" : ""
         } gap-6`}
       >
-        <div className="bg-white rounded-3xl border border-slate-200 p-6 shadow-sm">
-          <div className="flex items-center justify-between gap-4 mb-4">
-            <div>
-              <h3 className="text-2xl font-black text-slate-900">
-                Submitted Requests
-              </h3>
-              <p className="text-sm text-slate-500 mt-1">
-                Review all budget requests submitted for this club.
-              </p>
-            </div>
-
-            <span className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-indigo-50 text-indigo-700 text-sm font-semibold">
-              <BadgeCheck size={14} />
-              Approved: {approvedCount}
-            </span>
-          </div>
+        <div className="bg-white rounded-3xl border border-[#0B1E8A]/10 p-6 shadow-sm">
+          <h3 className="text-xl font-black text-[#0B1E8A] mb-4">
+            Submitted Requests
+          </h3>
 
           {loading ? (
-            <p className="text-slate-500">Loading budget requests...</p>
+            <p className="text-gray-500">Loading...</p>
           ) : budgets.length === 0 ? (
-            <div className="rounded-2xl border border-dashed border-slate-300 p-6 text-center text-slate-500">
+            <div className="border border-dashed border-[#0B1E8A]/20 p-6 text-center text-gray-500">
               No budget requests found.
             </div>
           ) : (
             <div className="space-y-4">
               {budgets.map((budget) => {
-                const normalizedStatus = normalizeText(budget.status);
-                const isPending = normalizedStatus === "pending";
+                const isPending = normalizeText(budget.status) === "pending";
                 const isBusy = actionLoadingId === budget._id;
+                const canEditThisBudget =
+                  canCreateBudgetRequests && isPending && !isSystemAdmin;
 
                 return (
                   <div
                     key={budget._id}
-                    className="rounded-2xl border border-slate-200 p-4"
+                    className="border border-[#0B1E8A]/10 p-4 rounded-xl"
                   >
-                    <div className="flex items-start justify-between gap-4">
+                    <div className="flex justify-between gap-4">
                       <div>
-                        <h4 className="font-bold text-slate-900">
-                          {budget.title || "Untitled Budget Request"}
+                        <h4 className="font-bold text-[#0B1E8A]">
+                          {budget.title}
                         </h4>
-
-                        <p className="text-sm text-slate-500 mt-1">
-                          {budget.description || "No description provided"}
+                        <p className="text-sm text-gray-600 mt-1">
+                          {budget.description}
                         </p>
-
-                        <div className="mt-3 flex flex-wrap gap-3 text-sm text-slate-600">
-                          <span className="px-3 py-1 rounded-full bg-slate-100 text-slate-700 font-medium">
-                            {budget.category || "General"}
+                        {budget.category && (
+                          <span className="mt-2 inline-block text-xs font-semibold px-3 py-1 rounded-full bg-[#0B1E8A]/5 text-[#0B1E8A]">
+                            {budget.category}
                           </span>
-
-                          {budget.createdAt && (
-                            <span className="px-3 py-1 rounded-full bg-slate-100 text-slate-700 font-medium">
-                              {new Date(budget.createdAt).toLocaleDateString()}
-                            </span>
-                          )}
-                        </div>
+                        )}
                       </div>
 
-                      <div className="text-right min-w-[110px]">
-                        <p className="font-black text-slate-900">
+                      <div className="text-right">
+                        <p className="font-black text-[#0B1E8A]">
                           Rs. {Number(budget.amount || 0).toLocaleString()}
                         </p>
-
                         <span
-                          className={`inline-flex mt-2 px-3 py-1 rounded-full text-xs font-bold ${getStatusClass(
+                          className={`mt-2 inline-block text-xs font-bold px-3 py-1 rounded-full ${getStatusClass(
                             budget.status
                           )}`}
                         >
-                          {budget.status || "pending"}
+                          {budget.status}
                         </span>
                       </div>
                     </div>
 
-                    {budget.rejectionReason && (
-                      <div className="mt-3 rounded-xl bg-slate-50 px-4 py-3 text-sm text-slate-600 border border-slate-200">
-                        <span className="font-semibold text-slate-800">
-                          Rejection Reason:
-                        </span>{" "}
-                        {budget.rejectionReason}
-                      </div>
-                    )}
-
-                    {canApproveRejectBudgets && isPending && (
-                      <div className="mt-4 flex flex-wrap gap-3">
+                    <div className="mt-4 flex flex-wrap gap-3">
+                      {canEditThisBudget && (
                         <button
                           type="button"
-                          disabled={isBusy}
-                          onClick={() => handleApprove(budget._id)}
-                          className="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-4 py-2.5 text-white font-semibold hover:bg-emerald-700 disabled:opacity-60"
+                          onClick={() => handleEdit(budget)}
+                          className="flex items-center gap-2 border border-[#0B1E8A]/20 px-4 py-2 rounded-lg text-[#0B1E8A] hover:bg-[#0B1E8A]/5"
                         >
-                          <CheckCircle2 size={16} />
-                          {isBusy ? "Processing..." : "Approve"}
+                          <Pencil size={16} />
+                          Edit
                         </button>
+                      )}
 
-                        <button
-                          type="button"
-                          disabled={isBusy}
-                          onClick={() => handleReject(budget._id)}
-                          className="inline-flex items-center gap-2 rounded-xl bg-rose-600 px-4 py-2.5 text-white font-semibold hover:bg-rose-700 disabled:opacity-60"
-                        >
-                          <XCircle size={16} />
-                          {isBusy ? "Processing..." : "Reject"}
-                        </button>
-                      </div>
-                    )}
+                      {canApproveRejectBudgets && isPending && (
+                        <>
+                          <button
+                            type="button"
+                            disabled={isBusy}
+                            onClick={() => handleApprove(budget._id)}
+                            className="flex items-center gap-2 bg-[#F36C21] px-4 py-2 rounded-lg text-white hover:bg-orange-600 disabled:opacity-60"
+                          >
+                            <CheckCircle2 size={16} />
+                            Approve
+                          </button>
+
+                          <button
+                            type="button"
+                            disabled={isBusy}
+                            onClick={() => handleReject(budget._id)}
+                            className="flex items-center gap-2 border border-[#0B1E8A]/20 px-4 py-2 rounded-lg text-[#0B1E8A] hover:bg-[#0B1E8A]/5 disabled:opacity-60"
+                          >
+                            <XCircle size={16} />
+                            Reject
+                          </button>
+                        </>
+                      )}
+                    </div>
                   </div>
                 );
               })}
@@ -460,73 +476,55 @@ const BudgetsTab = ({ clubId, club, membership, permissions }) => {
         </div>
 
         {canCreateBudgetRequests && (
-          <div className="bg-white rounded-3xl border border-slate-200 p-6 shadow-sm">
-            <div className="flex items-center gap-2 mb-4">
-              <PlusCircle className="text-indigo-600" size={20} />
-              <h3 className="text-2xl font-black text-slate-900">
-                Create Budget Request
+          <div className="bg-white rounded-3xl border border-[#0B1E8A]/10 p-6 shadow-sm">
+            <div className="flex items-center justify-between gap-3 mb-4">
+              <h3 className="text-xl font-black text-[#0B1E8A]">
+                {editingBudgetId ? "Edit Budget Request" : "Create Budget Request"}
               </h3>
-            </div>
 
-            <p className="text-sm text-slate-500 mb-4">
-              Submit a new budget request for {club?.name || "this club"}.
-            </p>
+              {editingBudgetId && (
+                <button
+                  type="button"
+                  onClick={handleCancelEdit}
+                  className="flex items-center gap-2 px-3 py-2 rounded-xl border border-[#0B1E8A]/20 text-[#0B1E8A] font-semibold hover:bg-[#0B1E8A]/5"
+                >
+                  <X size={16} />
+                  Cancel Edit
+                </button>
+              )}
+            </div>
 
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
-                <label className="block text-sm font-semibold text-slate-700 mb-1.5">
-                  Title
-                </label>
                 <input
-                  type="text"
                   value={budgetForm.title}
                   onChange={(e) => handleInputChange("title", e.target.value)}
-                  className={`w-full rounded-xl border px-4 py-3 text-sm focus:outline-none focus:ring-2 ${
-                    errors.title
-                      ? "border-rose-300 focus:ring-rose-100"
-                      : "border-slate-200 focus:ring-indigo-200"
-                  }`}
-                  placeholder="Enter budget title"
+                  placeholder="Title"
+                  className="w-full rounded-xl border border-gray-300 px-4 py-3 focus:ring-2 focus:ring-[#F36C21] outline-none"
                 />
                 {errors.title && (
-                  <p className="mt-1 text-sm text-rose-600">{errors.title}</p>
+                  <p className="mt-1 text-sm text-red-500">{errors.title}</p>
                 )}
               </div>
 
               <div>
-                <label className="block text-sm font-semibold text-slate-700 mb-1.5">
-                  Amount
-                </label>
                 <input
                   type="number"
-                  min="1"
-                  step="0.01"
                   value={budgetForm.amount}
                   onChange={(e) => handleInputChange("amount", e.target.value)}
-                  className={`w-full rounded-xl border px-4 py-3 text-sm focus:outline-none focus:ring-2 ${
-                    errors.amount
-                      ? "border-rose-300 focus:ring-rose-100"
-                      : "border-slate-200 focus:ring-indigo-200"
-                  }`}
-                  placeholder="Enter amount"
+                  placeholder="Amount"
+                  className="w-full rounded-xl border border-gray-300 px-4 py-3 focus:ring-2 focus:ring-[#F36C21] outline-none"
                 />
                 {errors.amount && (
-                  <p className="mt-1 text-sm text-rose-600">{errors.amount}</p>
+                  <p className="mt-1 text-sm text-red-500">{errors.amount}</p>
                 )}
               </div>
 
               <div>
-                <label className="block text-sm font-semibold text-slate-700 mb-1.5">
-                  Category
-                </label>
                 <select
                   value={budgetForm.category}
                   onChange={(e) => handleInputChange("category", e.target.value)}
-                  className={`w-full rounded-xl border px-4 py-3 text-sm focus:outline-none focus:ring-2 ${
-                    errors.category
-                      ? "border-rose-300 focus:ring-rose-100"
-                      : "border-slate-200 focus:ring-indigo-200"
-                  }`}
+                  className="w-full rounded-xl border border-gray-300 px-4 py-3 focus:ring-2 focus:ring-[#F36C21] outline-none"
                 >
                   {budgetCategories.map((category) => (
                     <option key={category} value={category}>
@@ -535,29 +533,22 @@ const BudgetsTab = ({ clubId, club, membership, permissions }) => {
                   ))}
                 </select>
                 {errors.category && (
-                  <p className="mt-1 text-sm text-rose-600">{errors.category}</p>
+                  <p className="mt-1 text-sm text-red-500">{errors.category}</p>
                 )}
               </div>
 
               <div>
-                <label className="block text-sm font-semibold text-slate-700 mb-1.5">
-                  Description
-                </label>
                 <textarea
-                  rows="5"
+                  rows="4"
                   value={budgetForm.description}
                   onChange={(e) =>
                     handleInputChange("description", e.target.value)
                   }
-                  className={`w-full rounded-xl border px-4 py-3 text-sm focus:outline-none focus:ring-2 ${
-                    errors.description
-                      ? "border-rose-300 focus:ring-rose-100"
-                      : "border-slate-200 focus:ring-indigo-200"
-                  }`}
-                  placeholder="Explain why this budget is needed"
+                  placeholder="Description"
+                  className="w-full rounded-xl border border-gray-300 px-4 py-3 focus:ring-2 focus:ring-[#F36C21] outline-none"
                 />
                 {errors.description && (
-                  <p className="mt-1 text-sm text-rose-600">
+                  <p className="mt-1 text-sm text-red-500">
                     {errors.description}
                   </p>
                 )}
@@ -566,32 +557,17 @@ const BudgetsTab = ({ clubId, club, membership, permissions }) => {
               <button
                 type="submit"
                 disabled={submitting}
-                className="inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-indigo-600 text-white font-semibold hover:bg-indigo-700 disabled:opacity-60"
+                className="w-full py-3 rounded-xl bg-[#F36C21] text-white font-semibold hover:bg-orange-600 disabled:opacity-60"
               >
-                <DollarSign size={16} />
-                {submitting ? "Submitting..." : "Submit Budget Request"}
+                {submitting
+                  ? editingBudgetId
+                    ? "Updating..."
+                    : "Submitting..."
+                  : editingBudgetId
+                  ? "Update Budget Request"
+                  : "Submit Budget Request"}
               </button>
             </form>
-          </div>
-        )}
-
-        {!canCreateBudgetRequests && !canApproveRejectBudgets && (
-          <div className="bg-white rounded-3xl border border-slate-200 p-6 shadow-sm">
-            <div className="flex items-center gap-2 mb-4">
-              <Lock className="text-amber-600" size={20} />
-              <h3 className="text-2xl font-black text-slate-900">
-                Budget Actions
-              </h3>
-            </div>
-
-            <p className="text-sm text-slate-500 mb-4">
-              You can view budget requests, but you are not allowed to submit new
-              ones for this club.
-            </p>
-
-            <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
-              Only allowed club management roles can submit budget requests.
-            </div>
           </div>
         )}
       </div>

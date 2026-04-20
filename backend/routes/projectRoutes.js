@@ -1,5 +1,6 @@
 import express from "express";
-import upload from "../middleware/upload.js";
+import { uploadEventImage } from "../middleware/uploadMiddleware.js";
+import { protect } from "../middleware/authMiddleware.js";
 
 import {
   createProject,
@@ -8,29 +9,19 @@ import {
   updateProject,
   likeProject,
   addComment,
-  getComments
-  , deleteComment
+  getComments,
+  deleteComment,
 } from "../controllers/projectController.js";
 
 const router = express.Router();
 
-
-router.post("/create", upload.array("images"), createProject);
-
+router.post("/create", uploadEventImage.array("images", 3), createProject);
 router.get("/", getProjects);
-
+router.put("/:id", uploadEventImage.array("images", 3), updateProject);
 router.delete("/:id", deleteProject);
-
-// update must come before /like to avoid route conflict if used without prefix
-router.put("/:id", upload.array("images"), updateProject);
-
 router.put("/like/:id", likeProject);
-
-router.post("/comment/:id", addComment);
-
+router.post("/comment/:id", protect, addComment);
 router.get("/comments/:id", getComments);
-
-// delete a comment by comment id (admin)
 router.delete("/comment/:id", deleteComment);
 
 export default router;

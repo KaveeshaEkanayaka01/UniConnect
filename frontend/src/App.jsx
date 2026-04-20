@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { BrowserRouter, Route, Routes, Navigate } from "react-router-dom";
 
 // Auth
@@ -44,8 +44,47 @@ import ProjectFeed from "./components/pages/ProjectFeed";
 import UploadProject from "./components/pages/UploadProject";
 import ClubEventAnalysis from "./components/pages/ClubEventAnalysis";
 import NewsEditor from "./components/pages/NewsEditor";
+import NewsForm from "./components/NewsComponents/NewsForm.jsx";
+import NewsItem from "./components/NewsComponents/NewsItem.jsx";
+import NewsList from "./components/NewsComponents/NewsList.jsx";
+
+// Event Module
+import CreateEvent from "./components/CreateEvent.jsx";
+import EventCalendar from "./components/EventCalendar.jsx";
+import EventRegistration from "./components/EventRegistration.jsx";
+import ManageEvents from "./components/ManageEvents.jsx";
+import EventDetails from "./components/EventDetails.jsx";
+import StudentEvents from "./components/StudentEvents.jsx";
+
+import "./App.css";
 
 function App() {
+  const [userRole, setUserRole] = useState(null);
+
+  useEffect(() => {
+    const getCurrentUser = () => {
+  try {
+    return (
+      JSON.parse(localStorage.getItem("userInfo")) ||
+      JSON.parse(localStorage.getItem("user")) ||
+      JSON.parse(localStorage.getItem("authUser")) ||
+      null
+    );
+  } catch {
+    return null;
+  }
+};
+
+const user = getCurrentUser();
+    if (user) {
+      setUserRole(user.role);
+    }
+  }, []);
+
+  const handleNewsSubmit = (payload) => {
+    console.log("News submitted:", payload);
+  };
+
   return (
     <BrowserRouter>
       <Routes>
@@ -62,7 +101,7 @@ function App() {
         <Route
           path="/admin"
           element={
-            <ProtectedRoute allowedRoles={["SYSTEM_ADMIN"]}>
+            <ProtectedRoute allowedRoles={["SYSTEM_ADMIN", "CLUB_ADMIN"]}>
               <AdminPanel />
             </ProtectedRoute>
           }
@@ -90,7 +129,6 @@ function App() {
           <Route path="/badges" element={<BadgeCertificationPage />} />
 
           <Route path="/my-clubs" element={<MyClubs />} />
-
           <Route path="/clubs/:clubId" element={<ClubDashboard />} />
           <Route path="/clubs/:clubId/manage" element={<ClubManage />} />
           <Route
@@ -99,13 +137,53 @@ function App() {
           />
 
           {/* News Module Routes */}
-          <Route path="/news-only" element={<NewsOnlyPage />} />
-          <Route path="/project-feed" element={<ProjectFeed />} />
+          <Route path="/club-news" element={<NewsOnlyPage />} />
+          <Route path="/club-projects" element={<ProjectFeed />} />
           <Route path="/upload-project" element={<UploadProject />} />
-          <Route path="/analysis" element={<ClubEventAnalysis />} />
+          <Route path="/club-analytics" element={<ClubEventAnalysis />} />
           <Route path="/manage-news" element={<NewsPage />} />
           <Route path="/manage-news/new" element={<NewsEditor />} />
           <Route path="/manage-news/edit/:id" element={<NewsEditor />} />
+          <Route
+            path="/newsForm"
+            element={<NewsForm onSubmit={handleNewsSubmit} />}
+          />
+          <Route path="/newsItem" element={<NewsItem />} />
+          <Route path="/newsList" element={<NewsList />} />
+
+          {/* Event Module Routes */}
+          <Route path="/calendar" element={<EventCalendar />} />
+          <Route
+            path="/event-registration"
+            element={<EventRegistration userRole={userRole} />}
+          />
+          <Route path="/event/:id" element={<EventDetails />} />
+          <Route path="/all-events" element={<StudentEvents />} />
+
+          <Route
+            path="/create-event"
+            element={
+              <ProtectedRoute allowedRoles={["CLUB_ADMIN", "SYSTEM_ADMIN"]}>
+                <CreateEvent />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/edit-event/:id"
+            element={
+              <ProtectedRoute allowedRoles={["CLUB_ADMIN", "SYSTEM_ADMIN"]}>
+                <CreateEvent />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/manage-events"
+            element={
+              <ProtectedRoute allowedRoles={["CLUB_ADMIN", "SYSTEM_ADMIN"]}>
+                <ManageEvents />
+              </ProtectedRoute>
+            }
+          />
         </Route>
 
         {/* Fallback */}

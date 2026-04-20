@@ -5,17 +5,27 @@ const newsSchema = new mongoose.Schema(
     title: {
       type: String,
       required: true,
+      trim: true,
     },
     content: {
       type: String,
       required: true,
+      trim: true,
     },
     author: {
       type: String,
       required: true,
+      trim: true,
     },
-    image: String,
-    category: String,
+    image: {
+      type: String,
+      default: '',
+    },
+    category: {
+      type: String,
+      default: '',
+      trim: true,
+    },
     publishedDate: {
       type: Date,
       default: Date.now,

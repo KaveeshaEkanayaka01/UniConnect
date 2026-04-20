@@ -1,92 +1,82 @@
+import mongoose from "mongoose";
 import Budget from "../models/Budget.js";
 import Club from "../models/Club.js";
 
-const normalizeText = (value) => String(value || "").trim().toLowerCase();
+const SYSTEM_ADMIN = "SYSTEM_ADMIN";
+
+const ROLE_ALIASES = {
+  EXECUTIVE: "EXECUTIVE_COMMITTEE_MEMBER",
+};
+
+const BUDGET_CREATOR_ROLES = [
+  "PRESIDENT",
+  "VICE_PRESIDENT",
+  "TREASURER",
+  "SECRETARY",
+  "ASSISTANT_SECRETARY",
+  "ASSISTANT_TREASURER",
+  "EVENT_COORDINATOR",
+  "PROJECT_COORDINATOR",
+  "EXECUTIVE_COMMITTEE_MEMBER",
+];
+
+const normalizeRole = (role) => {
+  const normalized = String(role || "")
+    .trim()
+    .replace(/\s+/g, "_")
+    .toUpperCase();
+
+  return ROLE_ALIASES[normalized] || normalized;
+};
 
 const sameId = (a, b) => {
   if (!a || !b) return false;
   return String(a._id || a) === String(b._id || b);
 };
 
-const budgetCreatorRoles = [
-  "president",
-  "vice_president",
-  "treasurer",
-  "secretary",
-  "assistant_secretary",
-  "assistant_treasurer",
-  "event_coordinator",
-  "project_coordinator",
-  "executive",
-];
+const isValidObjectId = (id) => mongoose.Types.ObjectId.isValid(id);
 
 const getActiveMembership = (club, userId) => {
   if (!club?.members || !Array.isArray(club.members)) return null;
 
   return (
-    club.members.find(
-      (member) =>
-        member?.user &&
-        sameId(member.user, userId) &&
-        normalizeText(member.status) === "active"
-    ) || null
+    club.members.find((member) => {
+      const status = String(member?.status || "").trim().toLowerCase();
+      return member?.user && sameId(member.user, userId) && ["active", "approved"].includes(status);
+    }) || null
   );
 };
+
+const isSystemAdmin = (user) => normalizeRole(user?.role) === SYSTEM_ADMIN;
 
 const isAssignedClubAdminForClub = (club, userId) => {
   return Boolean(club?.clubAdmin?.user && sameId(club.clubAdmin.user, userId));
 };
 
 const canCreateClubBudget = (req, club) => {
-  const userRole = normalizeText(req.user?.role);
   const userId = req.user?._id || req.user?.id;
 
-  // SYSTEM_ADMIN can approve/reject but should not create
-  if (userRole === "system_admin") return false;
+  if (isSystemAdmin(req.user)) return false;
+  if (isAssignedClubAdminForClub(club, userId)) return true;
+  if (club?.president?.user && sameId(club.president.user, userId)) return true;
 
-  // Assigned club admin for THIS club can create
-  if (isAssignedClubAdminForClub(club, userId)) {
-    return true;
-  }
-
-  // President reference for THIS club can create
-  if (club?.president?.user && sameId(club.president.user, userId)) {
-    return true;
-  }
-
-  // Child role inside THIS club decides permission
   const membership = getActiveMembership(club, userId);
   if (!membership) return false;
 
-  const membershipRole = normalizeText(membership.role);
-
-  return budgetCreatorRoles.includes(membershipRole);
+  return BUDGET_CREATOR_ROLES.includes(normalizeRole(membership.role));
 };
 
 const canViewClubBudgets = (req, club) => {
-  const userRole = normalizeText(req.user?.role);
   const userId = req.user?._id || req.user?.id;
 
-  // SYSTEM_ADMIN can view everything
-  if (userRole === "system_admin") return true;
+  if (isSystemAdmin(req.user)) return true;
+  if (isAssignedClubAdminForClub(club, userId)) return true;
+  if (club?.president?.user && sameId(club.president.user, userId)) return true;
 
-  // Assigned club admin for THIS club can view
-  if (isAssignedClubAdminForClub(club, userId)) {
-    return true;
-  }
-
-  // President reference for THIS club can view
-  if (club?.president?.user && sameId(club.president.user, userId)) {
-    return true;
-  }
-
-  // Child role inside THIS club decides permission
   const membership = getActiveMembership(club, userId);
   if (!membership) return false;
 
-  const membershipRole = normalizeText(membership.role);
-
-  return membershipRole !== "member";
+  return normalizeRole(membership.role) !== "MEMBER";
 };
 
 export const createBudget = async (req, res) => {
@@ -101,8 +91,16 @@ export const createBudget = async (req, res) => {
       });
     }
 
+    if (!isValidObjectId(resolvedClubId)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid club ID",
+      });
+    }
+
     const normalizedTitle = String(title).trim();
     const normalizedDescription = description ? String(description).trim() : "";
+    const normalizedCategory = category ? String(category).trim() : "General";
     const numericAmount = Number(amount);
 
     if (!normalizedTitle) {
@@ -160,10 +158,15 @@ export const createBudget = async (req, res) => {
       club: resolvedClubId,
       title: normalizedTitle,
       description: normalizedDescription,
+      category: normalizedCategory,
       amount: numericAmount,
-      category: category ? String(category).trim() : "General",
       requestedBy: req.user._id || req.user.id,
       status: "pending",
+      approvedAmount: null,
+      remarks: "",
+      rejectionReason: "",
+      approvedBy: null,
+      approvedAt: null,
     });
 
     await budget.save();
@@ -186,6 +189,13 @@ export const createBudget = async (req, res) => {
 export const getClubBudgets = async (req, res) => {
   try {
     const { clubId } = req.params;
+
+    if (!isValidObjectId(clubId)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid club ID",
+      });
+    }
 
     const club = await Club.findById(clubId);
     if (!club) {
@@ -223,7 +233,7 @@ export const getClubBudgets = async (req, res) => {
 
 export const getAllBudgets = async (req, res) => {
   try {
-    if (normalizeText(req.user?.role) !== "system_admin") {
+    if (!isSystemAdmin(req.user)) {
       return res.status(403).json({
         success: false,
         message: "You are not allowed to view all budget requests",
@@ -253,11 +263,19 @@ export const getAllBudgets = async (req, res) => {
 export const approveBudget = async (req, res) => {
   try {
     const { budgetId } = req.params;
+    const { approvedAmount, remarks } = req.body || {};
 
-    if (normalizeText(req.user?.role) !== "system_admin") {
+    if (!isSystemAdmin(req.user)) {
       return res.status(403).json({
         success: false,
         message: "You are not allowed to approve budget requests",
+      });
+    }
+
+    if (!isValidObjectId(budgetId)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid budget ID",
       });
     }
 
@@ -270,6 +288,12 @@ export const approveBudget = async (req, res) => {
     }
 
     budget.status = "approved";
+    budget.approvedAmount =
+      approvedAmount === undefined || approvedAmount === null || approvedAmount === ""
+        ? budget.amount
+        : Number(approvedAmount);
+    budget.remarks = remarks ? String(remarks).trim() : "";
+    budget.rejectionReason = "";
     budget.approvedBy = req.user._id || req.user.id;
     budget.approvedAt = new Date();
 
@@ -293,12 +317,19 @@ export const approveBudget = async (req, res) => {
 export const rejectBudget = async (req, res) => {
   try {
     const { budgetId } = req.params;
-    const { reason } = req.body;
+    const { reason, remarks } = req.body || {};
 
-    if (normalizeText(req.user?.role) !== "system_admin") {
+    if (!isSystemAdmin(req.user)) {
       return res.status(403).json({
         success: false,
         message: "You are not allowed to reject budget requests",
+      });
+    }
+
+    if (!isValidObjectId(budgetId)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid budget ID",
       });
     }
 
@@ -311,7 +342,9 @@ export const rejectBudget = async (req, res) => {
     }
 
     budget.status = "rejected";
-    budget.rejectionReason = reason ? String(reason).trim() : "Rejected";
+    budget.rejectionReason = String(reason || remarks || "Rejected").trim();
+    budget.remarks = budget.rejectionReason;
+    budget.approvedAmount = null;
     budget.approvedBy = req.user._id || req.user.id;
     budget.approvedAt = new Date();
 
@@ -336,6 +369,13 @@ export const deleteBudget = async (req, res) => {
   try {
     const { budgetId } = req.params;
 
+    if (!isValidObjectId(budgetId)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid budget ID",
+      });
+    }
+
     const budget = await Budget.findById(budgetId);
     if (!budget) {
       return res.status(404).json({
@@ -344,12 +384,11 @@ export const deleteBudget = async (req, res) => {
       });
     }
 
-    const isSystemAdmin = normalizeText(req.user?.role) === "system_admin";
     const isOwner =
       budget.requestedBy &&
       sameId(budget.requestedBy, req.user._id || req.user.id);
 
-    if (!isSystemAdmin && !(isOwner && normalizeText(budget.status) === "pending")) {
+    if (!isSystemAdmin(req.user) && !(isOwner && String(budget.status).toLowerCase() === "pending")) {
       return res.status(403).json({
         success: false,
         message: "You are not allowed to delete this budget request",

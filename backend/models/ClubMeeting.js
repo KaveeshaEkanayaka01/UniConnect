@@ -1,6 +1,6 @@
 import mongoose from "mongoose";
 
-const EVENT_CATEGORIES = [
+const MEETING_CATEGORIES = [
   "Workshop",
   "Seminar",
   "Competition",
@@ -12,10 +12,10 @@ const EVENT_CATEGORIES = [
   "Other",
 ];
 
-const EVENT_STATUSES = ["upcoming", "ongoing", "completed", "cancelled"];
+const MEETING_STATUSES = ["upcoming", "ongoing", "completed", "cancelled"];
 const APPROVAL_STATUSES = ["pending", "approved", "rejected"];
 
-const clubEventSchema = new mongoose.Schema(
+const clubMeetingSchema = new mongoose.Schema(
   {
     club: {
       type: mongoose.Schema.Types.ObjectId,
@@ -26,10 +26,10 @@ const clubEventSchema = new mongoose.Schema(
 
     title: {
       type: String,
-      required: [true, "Event title is required"],
+      required: [true, "Meeting title is required"],
       trim: true,
-      minlength: [3, "Event title must be at least 3 characters"],
-      maxlength: [120, "Event title cannot exceed 120 characters"],
+      minlength: [3, "Meeting title must be at least 3 characters"],
+      maxlength: [120, "Meeting title cannot exceed 120 characters"],
     },
 
     description: {
@@ -43,7 +43,7 @@ const clubEventSchema = new mongoose.Schema(
     category: {
       type: String,
       required: [true, "Category is required"],
-      enum: EVENT_CATEGORIES,
+      enum: MEETING_CATEGORIES,
     },
 
     venue: {
@@ -65,7 +65,7 @@ const clubEventSchema = new mongoose.Schema(
 
     status: {
       type: String,
-      enum: EVENT_STATUSES,
+      enum: MEETING_STATUSES,
       default: "upcoming",
     },
 
@@ -121,15 +121,13 @@ const clubEventSchema = new mongoose.Schema(
   }
 );
 
-// IMPORTANT: no `next()` here
-clubEventSchema.pre("validate", function () {
+clubMeetingSchema.pre("validate", function () {
   if (this.startDate && this.endDate && this.endDate <= this.startDate) {
     this.invalidate("endDate", "End date must be after start date");
   }
 });
 
-// IMPORTANT: no `next()` here
-clubEventSchema.pre("save", function () {
+clubMeetingSchema.pre("save", function () {
   const now = new Date();
 
   if (this.status !== "cancelled" && this.startDate && this.endDate) {
@@ -143,4 +141,4 @@ clubEventSchema.pre("save", function () {
   }
 });
 
-export default mongoose.model("ClubEvent", clubEventSchema);
+export default mongoose.model("ClubMeeting", clubMeetingSchema);

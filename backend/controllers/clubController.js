@@ -3,6 +3,7 @@ import fs from "fs";
 import path from "path";
 import Club from "../models/Club.js";
 import User from "../models/User.js";
+import Membership from "../models/Membership.js";
 
 const isValidObjectId = (id) => mongoose.Types.ObjectId.isValid(id);
 
@@ -73,15 +74,15 @@ const allowedCategories = [
 
 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-const buildConstitutionPayload = (req, version = 1) => {
-  if (!req.file) return null;
+const buildConstitutionPayload = (file, userId, version = 1) => {
+  if (!file) return null;
 
   return {
-    fileUrl: `/uploads/constitutions/${req.file.filename}`,
-    fileName: req.file.originalname,
-    filePath: req.file.path,
+    fileUrl: `/uploads/${file.filename}`,
+    fileName: file.originalname,
+    filePath: file.path,
     uploadedAt: new Date(),
-    uploadedBy: req.user.id,
+    uploadedBy: userId,
     version,
   };
 };
@@ -97,6 +98,12 @@ const getAbsoluteConstitutionPath = (constitution = {}) => {
   }
 
   return null;
+};
+
+const getAbsoluteLogoPath = (logo = "") => {
+  if (!logo) return null;
+  const relativePath = String(logo).replace(/^\/+/, "");
+  return path.resolve(process.cwd(), relativePath);
 };
 
 const getActiveMembership = (club, userId) => {
@@ -117,7 +124,8 @@ const getRequesterClubRole = (club, userId) => {
   return membership?.role ? normalizeRole(membership.role) : null;
 };
 
-const isChildAdminRole = (role) => clubAdminChildRoles.includes(normalizeRole(role));
+const isChildAdminRole = (role) =>
+  clubAdminChildRoles.includes(normalizeRole(role));
 
 const isAssignedClubAdminForClub = (club, userId) => {
   return Boolean(club?.clubAdmin?.user && sameId(club.clubAdmin.user, userId));
@@ -274,6 +282,90 @@ const syncParentRolesForClubMembers = async (club) => {
   }
 };
 
+// ==================== MEMBERSHIP COLLECTION SYNC HELPERS ====================
+
+const mapClubRoleToMembershipRole = (role) => {
+  const normalized = normalizeRole(role);
+
+  switch (normalized) {
+    case "president":
+      return "PRESIDENT";
+    case "vice_president":
+      return "VICE_PRESIDENT";
+    case "secretary":
+      return "SECRETARY";
+    case "assistant_secretary":
+      return "ASSISTANT_SECRETARY";
+    case "treasurer":
+      return "TREASURER";
+    case "assistant_treasurer":
+      return "ASSISTANT_TREASURER";
+    case "event_coordinator":
+      return "EVENT_COORDINATOR";
+    case "project_coordinator":
+      return "PROJECT_COORDINATOR";
+    case "executive":
+      return "EXECUTIVE_COMMITTEE_MEMBER";
+    case "member":
+    default:
+      return "MEMBER";
+  }
+};
+
+const mapClubStatusToMembershipStatus = (status) => {
+  const normalized = normalizeText(status);
+
+  if (normalized === "active") return "APPROVED";
+  if (normalized === "pending") return "PENDING";
+  if (normalized === "rejected") return "REJECTED";
+  return "PENDING";
+};
+
+const syncMembershipForClubMember = async (clubId, member) => {
+  const userId = member?.user?._id || member?.user;
+
+  if (!clubId || !userId || !isValidObjectId(clubId) || !isValidObjectId(userId)) {
+    return;
+  }
+
+  await Membership.findOneAndUpdate(
+    {
+      club: clubId,
+      user: userId,
+    },
+    {
+      club: clubId,
+      user: userId,
+      role: mapClubRoleToMembershipRole(member.role),
+      status: mapClubStatusToMembershipStatus(member.status),
+    },
+    {
+      upsert: true,
+      new: true,
+      setDefaultsOnInsert: true,
+    }
+  );
+};
+
+const syncMembershipsForClub = async (club) => {
+  if (!club?._id || !Array.isArray(club.members)) return;
+
+  for (const member of club.members) {
+    await syncMembershipForClubMember(club._id, member);
+  }
+};
+
+const deleteMembershipForClubUser = async (clubId, userId) => {
+  if (!clubId || !userId || !isValidObjectId(clubId) || !isValidObjectId(userId)) {
+    return;
+  }
+
+  await Membership.deleteOne({
+    club: clubId,
+    user: userId,
+  });
+};
+
 // ==================== CLUB MANAGEMENT ====================
 
 // Create Club
@@ -282,8 +374,12 @@ export const createClub = async (req, res) => {
     const { name, description, category, presidentName, presidentEmail, tags } =
       req.body;
 
+    const logoFile = req.files?.logo?.[0] || null;
+    const constitutionFile = req.files?.constitution?.[0] || null;
+
     if (!name || !String(name).trim()) {
-      cleanupUploadedFile(req.file?.path);
+      cleanupUploadedFile(logoFile?.path);
+      cleanupUploadedFile(constitutionFile?.path);
       return res.status(400).json({
         success: false,
         message: "Club name is required",
@@ -291,7 +387,8 @@ export const createClub = async (req, res) => {
     }
 
     if (!description || !String(description).trim()) {
-      cleanupUploadedFile(req.file?.path);
+      cleanupUploadedFile(logoFile?.path);
+      cleanupUploadedFile(constitutionFile?.path);
       return res.status(400).json({
         success: false,
         message: "Description is required",
@@ -299,7 +396,8 @@ export const createClub = async (req, res) => {
     }
 
     if (!category || !allowedCategories.includes(category)) {
-      cleanupUploadedFile(req.file?.path);
+      cleanupUploadedFile(logoFile?.path);
+      cleanupUploadedFile(constitutionFile?.path);
       return res.status(400).json({
         success: false,
         message: `Invalid category. Allowed: ${allowedCategories.join(", ")}`,
@@ -307,7 +405,8 @@ export const createClub = async (req, res) => {
     }
 
     if (!presidentName || !String(presidentName).trim()) {
-      cleanupUploadedFile(req.file?.path);
+      cleanupUploadedFile(logoFile?.path);
+      cleanupUploadedFile(constitutionFile?.path);
       return res.status(400).json({
         success: false,
         message: "President name is required",
@@ -315,7 +414,8 @@ export const createClub = async (req, res) => {
     }
 
     if (!presidentEmail || !String(presidentEmail).trim()) {
-      cleanupUploadedFile(req.file?.path);
+      cleanupUploadedFile(logoFile?.path);
+      cleanupUploadedFile(constitutionFile?.path);
       return res.status(400).json({
         success: false,
         message: "President email is required",
@@ -325,7 +425,8 @@ export const createClub = async (req, res) => {
     const normalizedPresidentEmail = String(presidentEmail).trim().toLowerCase();
 
     if (!emailRegex.test(normalizedPresidentEmail)) {
-      cleanupUploadedFile(req.file?.path);
+      cleanupUploadedFile(logoFile?.path);
+      cleanupUploadedFile(constitutionFile?.path);
       return res.status(400).json({
         success: false,
         message: "Invalid president email",
@@ -336,14 +437,20 @@ export const createClub = async (req, res) => {
 
     const existingClub = await Club.findOne({ name: normalizedName });
     if (existingClub) {
-      cleanupUploadedFile(req.file?.path);
+      cleanupUploadedFile(logoFile?.path);
+      cleanupUploadedFile(constitutionFile?.path);
       return res.status(400).json({
         success: false,
         message: "Club with this name already exists",
       });
     }
 
-    const constitutionData = buildConstitutionPayload(req, 1);
+    const logo = logoFile ? `/uploads/${logoFile.filename}` : "";
+    const constitutionData = buildConstitutionPayload(
+      constitutionFile,
+      req.user.id,
+      1
+    );
 
     let presidentUser = await User.findOne({ email: normalizedPresidentEmail });
 
@@ -368,6 +475,11 @@ export const createClub = async (req, res) => {
 
     const normalizedTags = Array.isArray(tags)
       ? tags.map((tag) => String(tag).trim()).filter(Boolean)
+      : typeof tags === "string"
+      ? tags
+          .split(",")
+          .map((tag) => String(tag).trim())
+          .filter(Boolean)
       : [];
 
     const club = new Club({
@@ -375,6 +487,7 @@ export const createClub = async (req, res) => {
       description: String(description).trim(),
       category,
       tags: normalizedTags,
+      logo,
       constitution: constitutionData,
       president: {
         user: presidentUser._id,
@@ -394,18 +507,25 @@ export const createClub = async (req, res) => {
     });
 
     await club.save();
+    await syncMembershipsForClub(club);
     await syncUserParentRoleById(presidentUser._id);
 
     res.status(201).json({
       success: true,
-      message: constitutionData
+      message: constitutionData && logo
+        ? "Club, logo, and constitution uploaded successfully, pending approval"
+        : constitutionData
         ? "Club and constitution uploaded successfully, pending approval"
+        : logo
+        ? "Club and logo uploaded successfully, pending approval"
         : "Club created successfully and pending approval",
       data: club,
     });
   } catch (error) {
     console.error("Error creating club:", error);
-    cleanupUploadedFile(req.file?.path);
+    cleanupUploadedFile(req.files?.logo?.[0]?.path);
+    cleanupUploadedFile(req.files?.constitution?.[0]?.path);
+
     res.status(500).json({
       success: false,
       message: "Failed to create club",
@@ -619,6 +739,7 @@ export const updateClub = async (req, res) => {
     const { name, description, category, tags } = req.body;
 
     if (!isValidObjectId(id)) {
+      cleanupUploadedFile(req.file?.path);
       return res.status(400).json({
         success: false,
         message: "Invalid club ID",
@@ -628,6 +749,7 @@ export const updateClub = async (req, res) => {
     const club = await Club.findById(id);
 
     if (!club) {
+      cleanupUploadedFile(req.file?.path);
       return res.status(404).json({
         success: false,
         message: "Club not found",
@@ -635,6 +757,7 @@ export const updateClub = async (req, res) => {
     }
 
     if (!canManageClub(req, club)) {
+      cleanupUploadedFile(req.file?.path);
       return res.status(403).json({
         success: false,
         message: "You are not authorized to update this club",
@@ -645,6 +768,7 @@ export const updateClub = async (req, res) => {
       const normalizedName = String(name).trim();
 
       if (!normalizedName) {
+        cleanupUploadedFile(req.file?.path);
         return res.status(400).json({
           success: false,
           message: "Club name cannot be empty",
@@ -657,6 +781,7 @@ export const updateClub = async (req, res) => {
       });
 
       if (duplicate) {
+        cleanupUploadedFile(req.file?.path);
         return res.status(400).json({
           success: false,
           message: "Another club with this name already exists",
@@ -670,6 +795,7 @@ export const updateClub = async (req, res) => {
       const normalizedDescription = String(description).trim();
 
       if (!normalizedDescription) {
+        cleanupUploadedFile(req.file?.path);
         return res.status(400).json({
           success: false,
           message: "Description cannot be empty",
@@ -681,6 +807,7 @@ export const updateClub = async (req, res) => {
 
     if (category !== undefined) {
       if (!allowedCategories.includes(category)) {
+        cleanupUploadedFile(req.file?.path);
         return res.status(400).json({
           success: false,
           message: `Invalid category. Allowed: ${allowedCategories.join(", ")}`,
@@ -691,14 +818,34 @@ export const updateClub = async (req, res) => {
     }
 
     if (tags !== undefined) {
-      if (!Array.isArray(tags)) {
+      if (Array.isArray(tags)) {
+        club.tags = tags.map((tag) => String(tag).trim()).filter(Boolean);
+      } else if (typeof tags === "string") {
+        club.tags = tags
+          .split(",")
+          .map((tag) => String(tag).trim())
+          .filter(Boolean);
+      } else {
+        cleanupUploadedFile(req.file?.path);
         return res.status(400).json({
           success: false,
-          message: "Tags must be an array",
+          message: "Tags must be an array or comma separated string",
         });
       }
+    }
 
-      club.tags = tags.map((tag) => String(tag).trim()).filter(Boolean);
+    if (req.file) {
+      const oldLogoPath = getAbsoluteLogoPath(club.logo);
+
+      club.logo = `/uploads/${req.file.filename}`;
+
+      if (
+        oldLogoPath &&
+        oldLogoPath !== path.resolve(req.file.path) &&
+        fs.existsSync(oldLogoPath)
+      ) {
+        cleanupUploadedFile(oldLogoPath);
+      }
     }
 
     await club.save();
@@ -710,6 +857,7 @@ export const updateClub = async (req, res) => {
     });
   } catch (error) {
     console.error("Error updating club:", error);
+    cleanupUploadedFile(req.file?.path);
     res.status(500).json({
       success: false,
       message: "Failed to update club",
@@ -759,7 +907,7 @@ export const uploadConstitution = async (req, res) => {
     const oldConstitution = club.constitution;
     const nextVersion = (club.constitution?.version || 0) + 1;
 
-    club.constitution = buildConstitutionPayload(req, nextVersion);
+    club.constitution = buildConstitutionPayload(req.file, req.user.id, nextVersion);
 
     await club.save();
 
@@ -835,6 +983,59 @@ export const downloadConstitution = async (req, res) => {
   }
 };
 
+// Get club members
+export const getClubMembers = async (req, res) => {
+  try {
+    const { clubId } = req.params;
+
+    if (!isValidObjectId(clubId)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid club ID",
+      });
+    }
+
+    const club = await Club.findById(clubId).populate(
+      "members.user",
+      "fullName name email studentId role"
+    );
+
+    if (!club) {
+      return res.status(404).json({
+        success: false,
+        message: "Club not found",
+      });
+    }
+
+    if (!canManageClub(req, club) && !isSystemAdmin(req)) {
+      return res.status(403).json({
+        success: false,
+        message: "You are not authorized to view club members",
+      });
+    }
+
+    const normalizedMembers = (club.members || []).map((member) => ({
+      membershipId: String(member.user?._id || member.user || ""),
+      user: member.user || null,
+      role: member.role || "member",
+      status: member.status || "active",
+      joinedAt: member.joinedAt || null,
+    }));
+
+    res.status(200).json({
+      success: true,
+      data: normalizedMembers,
+    });
+  } catch (error) {
+    console.error("Error fetching club members:", error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to fetch club members",
+      error: error.message,
+    });
+  }
+};
+
 // Add member
 export const addMember = async (req, res) => {
   try {
@@ -905,6 +1106,8 @@ export const addMember = async (req, res) => {
     }
 
     await club.save();
+    await syncMembershipsForClub(club);
+    await syncUserParentRoleById(userId);
     await syncParentRolesForClubMembers(club);
 
     res.status(200).json({
@@ -925,9 +1128,10 @@ export const addMember = async (req, res) => {
 // Remove member
 export const removeMember = async (req, res) => {
   try {
-    const { id, userId } = req.params;
+    const { id } = req.params;
+    const targetUserId = req.params.userId || req.params.memberId;
 
-    if (!isValidObjectId(id) || !isValidObjectId(userId)) {
+    if (!isValidObjectId(id) || !isValidObjectId(targetUserId)) {
       return res.status(400).json({
         success: false,
         message: "Invalid club ID or user ID",
@@ -950,7 +1154,7 @@ export const removeMember = async (req, res) => {
       });
     }
 
-    const memberExists = club.members.some((m) => sameId(m.user, userId));
+    const memberExists = club.members.some((m) => sameId(m.user, targetUserId));
 
     if (!memberExists) {
       return res.status(404).json({
@@ -960,7 +1164,7 @@ export const removeMember = async (req, res) => {
     }
 
     const isCurrentPresident =
-      club.president?.user && sameId(club.president.user, userId);
+      club.president?.user && sameId(club.president.user, targetUserId);
 
     if (isCurrentPresident) {
       return res.status(400).json({
@@ -969,10 +1173,11 @@ export const removeMember = async (req, res) => {
       });
     }
 
-    club.members = club.members.filter((m) => !sameId(m.user, userId));
+    club.members = club.members.filter((m) => !sameId(m.user, targetUserId));
     await ensurePresidentReferenceMatchesMembers(club);
     await club.save();
-    await syncUserParentRoleById(userId);
+    await deleteMembershipForClubUser(id, targetUserId);
+    await syncUserParentRoleById(targetUserId);
 
     res.status(200).json({
       success: true,
@@ -991,10 +1196,11 @@ export const removeMember = async (req, res) => {
 // Update member role
 export const updateMemberRole = async (req, res) => {
   try {
-    const { clubId, userId } = req.params;
+    const { clubId } = req.params;
+    const targetUserId = req.params.userId || req.params.memberId;
     const { role } = req.body;
 
-    if (!isValidObjectId(clubId) || !isValidObjectId(userId)) {
+    if (!isValidObjectId(clubId) || !isValidObjectId(targetUserId)) {
       return res.status(400).json({
         success: false,
         message: "Invalid club ID or user ID",
@@ -1026,7 +1232,7 @@ export const updateMemberRole = async (req, res) => {
       });
     }
 
-    const member = club.members.find((m) => sameId(m.user, userId));
+    const member = club.members.find((m) => sameId(m.user, targetUserId));
 
     if (!member) {
       return res.status(404).json({
@@ -1037,11 +1243,11 @@ export const updateMemberRole = async (req, res) => {
 
     const previousRole = normalizeRole(member.role);
 
-    demoteExistingSingleRoleHolder(club, normalizedRole, userId);
+    demoteExistingSingleRoleHolder(club, normalizedRole, targetUserId);
     member.role = normalizedRole;
 
     if (normalizedRole === "president") {
-      await syncPresidentReference(club, userId);
+      await syncPresidentReference(club, targetUserId);
     }
 
     if (previousRole === "president" && normalizedRole !== "president") {
@@ -1049,6 +1255,7 @@ export const updateMemberRole = async (req, res) => {
     }
 
     await club.save();
+    await syncMembershipsForClub(club);
     await syncParentRolesForClubMembers(club);
 
     res.status(200).json({
@@ -1093,6 +1300,7 @@ export const approveClub = async (req, res) => {
     club.rejectionReason = "";
 
     await club.save();
+    await syncMembershipsForClub(club);
 
     res.status(200).json({
       success: true,
@@ -1135,6 +1343,7 @@ export const rejectClub = async (req, res) => {
     club.rejectionReason = reason?.trim() || "No reason provided";
 
     await club.save();
+    await syncMembershipsForClub(club);
 
     res.status(200).json({
       success: true,
@@ -1173,6 +1382,8 @@ export const deleteClub = async (req, res) => {
     }
 
     const oldConstitution = club.constitution;
+    const oldLogo = club.logo;
+
     const affectedUserIds = [
       ...new Set(
         (club.members || [])
@@ -1181,11 +1392,17 @@ export const deleteClub = async (req, res) => {
       ),
     ];
 
+    await Membership.deleteMany({ club: id });
     await club.deleteOne();
 
     const oldAbsolutePath = getAbsoluteConstitutionPath(oldConstitution);
     if (oldAbsolutePath) {
       cleanupUploadedFile(oldAbsolutePath);
+    }
+
+    const oldLogoPath = getAbsoluteLogoPath(oldLogo);
+    if (oldLogoPath) {
+      cleanupUploadedFile(oldLogoPath);
     }
 
     for (const affectedUserId of affectedUserIds) {
@@ -1270,6 +1487,24 @@ export const requestJoinClub = async (req, res) => {
 
     club.addJoinRequest(req.user.id);
     await club.save();
+
+    await Membership.findOneAndUpdate(
+      {
+        club: club._id,
+        user: req.user.id,
+      },
+      {
+        club: club._id,
+        user: req.user.id,
+        role: "MEMBER",
+        status: "PENDING",
+      },
+      {
+        upsert: true,
+        new: true,
+        setDefaultsOnInsert: true,
+      }
+    );
 
     res.status(200).json({
       success: true,
@@ -1441,6 +1676,32 @@ export const approveJoinRequest = async (req, res) => {
       "fullName email role"
     );
 
+    const approvedMember = club.members.find((m) =>
+      sameId(m.user, approvedRequest.user)
+    );
+
+    if (approvedMember) {
+      await syncMembershipForClubMember(club._id, approvedMember);
+    } else {
+      await Membership.findOneAndUpdate(
+        {
+          club: club._id,
+          user: approvedRequest.user,
+        },
+        {
+          club: club._id,
+          user: approvedRequest.user,
+          role: "MEMBER",
+          status: "APPROVED",
+        },
+        {
+          upsert: true,
+          new: true,
+          setDefaultsOnInsert: true,
+        }
+      );
+    }
+
     await syncUserParentRoleById(approvedRequest.user);
 
     res.status(200).json({
@@ -1490,8 +1751,31 @@ export const rejectJoinRequest = async (req, res) => {
       });
     }
 
+    const existingRequest = club.joinRequests.id(requestId);
+    const rejectedUserId = existingRequest?.user;
+
     club.rejectJoinRequest(requestId, req.user.id, reason);
     await club.save();
+
+    if (rejectedUserId) {
+      await Membership.findOneAndUpdate(
+        {
+          club: club._id,
+          user: rejectedUserId,
+        },
+        {
+          club: club._id,
+          user: rejectedUserId,
+          role: "MEMBER",
+          status: "REJECTED",
+        },
+        {
+          upsert: true,
+          new: true,
+          setDefaultsOnInsert: true,
+        }
+      );
+    }
 
     res.status(200).json({
       success: true,
@@ -1612,6 +1896,7 @@ export const cancelJoinRequest = async (req, res) => {
 
     club.joinRequests.splice(requestIndex, 1);
     await club.save();
+    await deleteMembershipForClubUser(club._id, userId);
 
     res.status(200).json({
       success: true,

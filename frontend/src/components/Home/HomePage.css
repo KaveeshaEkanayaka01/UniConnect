@@ -1,8 +1,19 @@
 .home-page {
 	width: 100%;
 	min-height: 100vh;
+
+	/* SLIIT BASE */
+	background: #ffffff;
+	color: #0a1e8c;
 }
 
 .home-hero-shell {
 	position: relative;
+
+	/* SLIIT HERO BACKGROUND */
+	background: linear-gradient(
+		180deg,
+		#0a1e8c 0%,
+		#08166f 100%
+	);
 }

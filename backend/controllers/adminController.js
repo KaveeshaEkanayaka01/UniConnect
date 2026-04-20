@@ -44,6 +44,15 @@ const getFrontendBaseUrl = (req) => {
   return backendBaseUrl.replace(/:5000\/?$/, ":5173").replace(/\/$/, "");
 };
 
+const getBackendBaseUrl = (req) => {
+  const configuredUrl = (process.env.BACKEND_PUBLIC_URL || "").trim();
+  if (configuredUrl) {
+    return configuredUrl.replace(/\/$/, "");
+  }
+
+  return `${req.protocol}://${req.get("host")}`.replace(/\/$/, "");
+};
+
 const escapeHtml = (value) =>
   String(value ?? "")
     .replace(/&/g, "&amp;")
@@ -55,103 +64,228 @@ const escapeHtml = (value) =>
 const buildRewardEmailHtml = ({ fullName, awardItems, dashboardUrl }) => {
   const safeName = escapeHtml(fullName || "Student");
 
+  const msoCards = awardItems
+    .map((item) => {
+      if (item.type === "badge") {
+        return `
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 10px;border:1px solid #bfd8ff;background:#f4f8ff;">
+            <tr>
+              <td style="padding:12px;font-family:Arial,Helvetica,sans-serif;color:#0f172a;">
+                <div style="font-size:11px;font-weight:bold;color:#1d4ed8;text-transform:uppercase;letter-spacing:.08em;">Badge Awarded</div>
+                <div style="font-size:18px;font-weight:bold;margin-top:4px;">${escapeHtml(
+                  item.title
+                )}</div>
+                ${
+                  item.description
+                    ? `<div style="margin-top:6px;font-size:13px;"><strong>Description:</strong> ${escapeHtml(
+                        item.description
+                      )}</div>`
+                    : ""
+                }
+                ${
+                  item.criteria
+                    ? `<div style="margin-top:6px;font-size:13px;"><strong>Criteria:</strong> ${escapeHtml(
+                        item.criteria
+                      )}</div>`
+                    : ""
+                }
+              </td>
+            </tr>
+          </table>`;
+      }
+
+      return `
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 10px;border:1px solid #d5dff0;background:#ffffff;">
+          <tr>
+            <td style="padding:12px;font-family:Arial,Helvetica,sans-serif;color:#0f172a;">
+              <div style="font-size:11px;font-weight:bold;color:#1d4ed8;text-transform:uppercase;letter-spacing:.08em;">Certificate Issued</div>
+              <div style="font-size:18px;font-weight:bold;margin-top:4px;">${escapeHtml(
+                item.title
+              )}</div>
+              ${
+                item.issuer
+                  ? `<div style="margin-top:6px;font-size:13px;"><strong>Issuer:</strong> ${escapeHtml(
+                      item.issuer
+                    )}</div>`
+                  : ""
+              }
+              ${
+                item.credentialId
+                  ? `<div style="margin-top:6px;font-size:13px;"><strong>Credential ID:</strong> ${escapeHtml(
+                      item.credentialId
+                    )}</div>`
+                  : ""
+              }
+              ${
+                item.verificationPageUrl
+                  ? `<div style="margin-top:6px;font-size:13px;"><strong>Verification:</strong> <a href="${escapeHtml(
+                      item.verificationPageUrl
+                    )}" style="color:#1d4ed8;text-decoration:none;">Open verification page</a></div>`
+                  : ""
+              }
+            </td>
+          </tr>
+        </table>`;
+    })
+    .join("");
+
   const cards = awardItems
     .map((item) => {
       if (item.type === "badge") {
         return `
-    <div style="margin:0 0 16px;padding:18px;border:1px solid #bfdbfe;border-radius:18px;background:linear-gradient(135deg,#dbeafe 0%,#ffffff 60%,#eff6ff 100%);">
-      <div style="display:flex;align-items:center;gap:12px;margin-bottom:10px;">
-        <div style="width:42px;height:42px;border-radius:14px;background:linear-gradient(135deg,#3b82f6 0%,#2563eb 100%);display:flex;align-items:center;justify-content:center;color:#ffffff;font-size:20px;">🏅</div>
-        <div>
-          <div style="font-size:12px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:#2563eb;">Badge Awarded</div>
-          <div style="font-size:18px;font-weight:800;color:#1e3a8a;margin-top:2px;">${escapeHtml(
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 14px;border:1px solid #bfd8ff;border-radius:16px;background:#f4f8ff;border-collapse:separate;overflow:hidden;">
+      <tr>
+        <td style="padding:16px;">
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+            <tr>
+              <td valign="top" style="width:46px;">
+                <div style="width:40px;height:40px;border-radius:12px;background:#1d4ed8;color:#ffffff;text-align:center;line-height:40px;font-size:19px;">🏅</div>
+              </td>
+              <td valign="top">
+                <div style="font-size:11px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:#1d4ed8;">Badge Awarded</div>
+                <div style="font-size:20px;font-weight:800;color:#0f172a;margin-top:4px;">${escapeHtml(
             item.title
           )}</div>
-        </div>
-      </div>
-      ${
-        item.description
-          ? `<div style="color:#1e40af;font-size:14px;line-height:1.55;margin-top:8px;"><strong style="color:#1e3a8a;">Description:</strong> ${escapeHtml(
+                ${
+                  item.description
+                    ? `<div style="color:#334155;font-size:14px;line-height:1.6;margin-top:8px;"><strong style="color:#0f172a;">Description:</strong> ${escapeHtml(
               item.description
             )}</div>`
-          : ""
-      }
-      ${
-        item.criteria
-          ? `<div style="color:#1e40af;font-size:14px;line-height:1.55;margin-top:8px;"><strong style="color:#1e3a8a;">Criteria:</strong> ${escapeHtml(
+                    : ""
+                }
+                ${
+                  item.criteria
+                    ? `<div style="color:#334155;font-size:14px;line-height:1.6;margin-top:8px;"><strong style="color:#0f172a;">Criteria:</strong> ${escapeHtml(
               item.criteria
             )}</div>`
-          : ""
-      }
-    </div>`;
+                    : ""
+                }
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>`;
       }
 
       return `
-        <div style="margin:0 0 16px;padding:18px;border:1px solid #c7d2fe;border-radius:18px;background:linear-gradient(135deg,#eef2ff 0%,#ffffff 55%,#f8fafc 100%);">
-          <div style="display:flex;align-items:center;gap:12px;margin-bottom:10px;">
-            <div style="width:42px;height:42px;border-radius:14px;background:linear-gradient(135deg,#dc2626 0%,#b91c1c 100%);display:flex;align-items:center;justify-content:center;color:#fff;font-size:20px;">🎓</div>
-            <div>
-              <div style="font-size:12px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:#1d4ed8;">Certificate Issued</div>
-              <div style="font-size:18px;font-weight:800;color:#0f172a;margin-top:2px;">${escapeHtml(
-                item.title
-              )}</div>
-            </div>
-          </div>
-          <div style="display:grid;grid-template-columns:1fr;gap:8px;color:#334155;font-size:14px;line-height:1.55;">
-            ${
-              item.issuer
-                ? `<div><strong style="color:#111827;">Issuer:</strong> ${escapeHtml(
-                    item.issuer
-                  )}</div>`
-                : ""
-            }
-            ${
-              item.credentialId
-                ? `<div><strong style="color:#111827;">Credential ID:</strong> ${escapeHtml(
-                    item.credentialId
-                  )}</div>`
-                : ""
-            }
-            ${
-              item.verificationPageUrl
-                ? `<div><strong style="color:#111827;">Verification:</strong> <a href="${escapeHtml(
-                    item.verificationPageUrl
-                  )}" style="color:#1d4ed8;text-decoration:none;">Open verification page</a></div>`
-                : ""
-            }
-          </div>
-        </div>`;
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 14px;border:1px solid #d5dff0;border-radius:16px;background:#ffffff;border-collapse:separate;overflow:hidden;">
+          <tr>
+            <td style="padding:0;">
+              <div style="height:5px;background:linear-gradient(90deg,#1e3a8a 0%,#3b82f6 45%,#ef4444 100%);"></div>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:16px;background:linear-gradient(145deg,rgba(59,130,246,.08) 0%,rgba(255,255,255,1) 42%,rgba(239,246,255,.7) 100%);">
+              <div style="font-size:28px;line-height:1;font-weight:800;letter-spacing:.22em;color:rgba(29,78,216,.11);text-align:right;margin:0 0 8px;">CERTIFIED</div>
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+                <tr>
+                  <td valign="top" style="width:56px;">
+                    <div style="width:44px;height:44px;border-radius:12px;background:#dc2626;color:#ffffff;text-align:center;line-height:44px;font-size:20px;">🎓</div>
+                  </td>
+                  <td valign="top" style="padding-right:${item.certificateImageUrl ? "14px" : "0"};">
+                    <div style="font-size:11px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:#1d4ed8;">Certificate Issued</div>
+                    <div style="font-size:20px;font-weight:800;color:#0f172a;margin-top:4px;">${escapeHtml(
+                      item.title
+                    )}</div>
+
+                    <div style="margin-top:10px;color:#334155;font-size:14px;line-height:1.65;">
+                      ${
+                        item.issuer
+                          ? `<div><strong style="color:#0f172a;">Issuer:</strong> ${escapeHtml(
+                              item.issuer
+                            )}</div>`
+                          : ""
+                      }
+                      ${
+                        item.credentialId
+                          ? `<div><strong style="color:#0f172a;">Credential ID:</strong> ${escapeHtml(
+                              item.credentialId
+                            )}</div>`
+                          : ""
+                      }
+                      ${
+                        item.issuedAt
+                          ? `<div><strong style="color:#0f172a;">Issued Date:</strong> ${escapeHtml(
+                              item.issuedAt
+                            )}</div>`
+                          : ""
+                      }
+                      ${
+                        item.verificationPageUrl
+                          ? `<div><strong style="color:#0f172a;">Verification:</strong> <a href="${escapeHtml(
+                              item.verificationPageUrl
+                            )}" style="color:#1d4ed8;text-decoration:none;">Open verification page</a></div>`
+                          : ""
+                      }
+                    </div>
+                  </td>
+                  ${
+                    item.certificateImageUrl
+                      ? `<td valign="top" style="width:150px;">
+                           <a href="${escapeHtml(
+                             item.certificateImageUrl
+                           )}" style="text-decoration:none;" target="_blank" rel="noreferrer">
+                             <img src="${escapeHtml(
+                               item.certificateImageUrl
+                             )}" alt="Certificate preview" width="140" style="display:block;width:140px;max-width:140px;height:auto;border:1px solid #d5dff0;border-radius:10px;" />
+                           </a>
+                         </td>`
+                      : ""
+                  }
+                </tr>
+              </table>
+            </td>
+          </tr>
+        </table>`;
     })
     .join("");
 
   return `
-    <div style="margin:0;padding:0;background:#e2e8f0;">
-      <div style="max-width:720px;margin:0 auto;background:#ffffff;border:1px solid #dbeafe;border-radius:24px;overflow:hidden;box-shadow:0 18px 50px rgba(15,23,42,.12);font-family:Arial,Helvetica,sans-serif;color:#0f172a;">
-        <div style="background:linear-gradient(135deg,#0f172a 0%,#1d4ed8 45%,#dc2626 100%);padding:32px 28px;color:#fff;">
-          <div style="font-size:12px;font-weight:800;letter-spacing:.18em;text-transform:uppercase;opacity:.9;">UniConnect Achievement Update</div>
-          <h1 style="margin:10px 0 0;font-size:28px;line-height:1.2;">Congratulations, ${safeName}!</h1>
-          <p style="margin:10px 0 0;font-size:15px;line-height:1.6;color:rgba(255,255,255,.92);max-width:580px;">You have received a new badge, certificate, or both. Your accomplishment is now recorded in UniConnect and ready to view from your dashboard.</p>
+    <div style="margin:0;padding:22px;background:#e6ebf3;">
+      <div style="max-width:760px;margin:0 auto;background:#ffffff;border:1px solid #d5dff0;border-radius:20px;overflow:hidden;box-shadow:0 14px 38px rgba(15,23,42,.12);font-family:Arial,Helvetica,sans-serif;color:#0f172a;">
+        <div style="padding:24px 26px;background:linear-gradient(120deg,#0f2e69 0%,#1d4ed8 58%,#1e3a8a 100%);color:#fff;">
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+            <tr>
+              <td valign="top">
+                <div style="font-size:12px;font-weight:800;letter-spacing:.18em;text-transform:uppercase;opacity:.95;">UniConnect Achievement Update</div>
+                <h1 style="margin:10px 0 0;font-size:42px;line-height:1.08;letter-spacing:.2px;">Congratulations, ${safeName}!</h1>
+                <p style="margin:12px 0 0;font-size:15px;line-height:1.6;max-width:620px;color:rgba(255,255,255,.95);">Your achievements are now officially recorded in UniConnect. We have attached your latest update summary below.</p>
+              </td>
+              <td valign="top" style="width:170px;padding-left:12px;">
+                <div style="margin-top:2px;border:1px solid rgba(255,255,255,.45);border-radius:12px;padding:10px 12px;background:rgba(255,255,255,.12);text-align:right;">
+                  <div style="font-size:10px;letter-spacing:.18em;text-transform:uppercase;color:rgba(255,255,255,.9);font-weight:700;">Official Notice</div>
+                  <div style="font-size:18px;font-weight:800;color:#ffffff;margin-top:4px;">UniConnect</div>
+                  <div style="font-size:11px;line-height:1.45;color:rgba(255,255,255,.92);margin-top:3px;">Credential & Achievement Desk</div>
+                </div>
+              </td>
+            </tr>
+          </table>
         </div>
 
-        <div style="padding:28px;">
-          <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:24px;">
-            <div style="padding:10px 14px;border-radius:999px;background:#eff6ff;color:#1d4ed8;font-size:12px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;">Blue = Achievement</div>
-            <div style="padding:10px 14px;border-radius:999px;background:#fef2f2;color:#dc2626;font-size:12px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;">Red = New Certificate</div>
-            <div style="padding:10px 14px;border-radius:999px;background:#f8fafc;color:#111827;font-size:12px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;border:1px solid #e2e8f0;">White = Dashboard Ready</div>
+        <div style="padding:24px 26px;">
+          <div style="margin:0 0 14px;padding:12px 14px;border:1px solid #d5dff0;border-radius:12px;background:#f8fbff;color:#334155;font-size:13px;line-height:1.55;">
+            This notification confirms your latest badge/certificate assignment. Use the verification link to validate credentials anytime.
           </div>
 
-          ${cards}
+          <!--[if mso]>
+          ${msoCards}
+          <![endif]-->
 
-          <div style="margin-top:24px;padding:18px 20px;border-radius:18px;background:#0f172a;color:#e2e8f0;">
-            <div style="font-size:15px;font-weight:700;color:#ffffff;margin-bottom:6px;">Next step</div>
-            <div style="font-size:14px;line-height:1.7;">Log in to your UniConnect dashboard to review the details, see your verified records, and share your achievement with confidence.</div>
+          <!--[if !mso]><!-- -->
+          ${cards}
+          <!--<![endif]-->
+
+          <div style="margin-top:18px;padding:18px 20px;border-radius:14px;background:#0f172a;color:#e2e8f0;">
+            <div style="font-size:15px;font-weight:800;color:#ffffff;margin-bottom:6px;">Next step</div>
+            <div style="font-size:14px;line-height:1.65;">Log in to your UniConnect dashboard to view badge details, certificate records, and verification status.</div>
             <a href="${escapeHtml(
               dashboardUrl
-            )}" style="display:inline-block;margin-top:14px;padding:12px 18px;border-radius:12px;background:linear-gradient(135deg,#1d4ed8 0%,#2563eb 100%);color:#fff;text-decoration:none;font-weight:800;font-size:14px;">Open Dashboard</a>
+            )}" style="display:inline-block;margin-top:14px;padding:11px 16px;border-radius:10px;background:#2563eb;color:#fff;text-decoration:none;font-weight:800;font-size:13px;">Open Dashboard</a>
           </div>
         </div>
 
-        <div style="padding:18px 28px 28px;color:#64748b;font-size:12px;line-height:1.6;border-top:1px solid #e2e8f0;background:#f8fafc;">
+        <div style="padding:16px 26px 22px;color:#64748b;font-size:12px;line-height:1.6;border-top:1px solid #e2e8f0;background:#f8fafc;">
           <strong style="color:#0f172a;">UniConnect</strong> keeps your achievements organized, verified, and easy to access.
         </div>
       </div>
@@ -465,6 +599,7 @@ export const assignRewards = async (req, res) => {
     if (certificateTitle && certificateTitle.trim()) {
       const resolvedCredentialId = await generateUniqueCredentialId();
       const frontendBaseUrl = getFrontendBaseUrl(req);
+      const backendBaseUrl = getBackendBaseUrl(req);
       const verificationPageUrl = `${frontendBaseUrl}/verify/${resolvedCredentialId}`;
 
       const certificateData = {
@@ -500,6 +635,10 @@ export const assignRewards = async (req, res) => {
         title: certificateData.title,
         issuer: certificateData.issuer,
         credentialId: certificateData.credentialId,
+        issuedAt: new Date(certificateData.issuedAt).toLocaleDateString(),
+        certificateImageUrl: certificateData.certificateUrl
+          ? `${backendBaseUrl}${certificateData.certificateUrl.startsWith("/") ? "" : "/"}${certificateData.certificateUrl}`
+          : "",
         verificationPageUrl,
       });
     }

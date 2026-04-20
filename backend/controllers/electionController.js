@@ -9,7 +9,7 @@ const MANAGE_ROLES = [
   "VICE_PRESIDENT",
   "TREASURER",
   "SECRETARY",
-  "EXECUTIVE",
+  "EXECUTIVE_COMMITTEE_MEMBER",
   "ASSISTANT_SECRETARY",
   "ASSISTANT_TREASURER",
   "EVENT_COORDINATOR",
@@ -18,7 +18,7 @@ const MANAGE_ROLES = [
 
 const VIEW_MEMBER_ROLES = [
   "MEMBER",
-  "EXECUTIVE",
+  "EXECUTIVE_COMMITTEE_MEMBER",
   "VICE_PRESIDENT",
   "PRESIDENT",
   "TREASURER",
@@ -44,11 +44,18 @@ const ELECTION_POSITIONS = [
 
 const ELECTION_STATUSES = ["upcoming", "ongoing", "completed", "cancelled"];
 
-const normalizeRole = (role) =>
-  String(role || "")
+const ROLE_ALIASES = {
+  EXECUTIVE: "EXECUTIVE_COMMITTEE_MEMBER",
+};
+
+const normalizeRole = (role) => {
+  const normalized = String(role || "")
     .trim()
     .replace(/\s+/g, "_")
     .toUpperCase();
+
+  return ROLE_ALIASES[normalized] || normalized;
+};
 
 const isValidObjectId = (id) => mongoose.Types.ObjectId.isValid(id);
 
@@ -134,7 +141,7 @@ const canViewElections = (user, club) => {
 
 const canVoteInElection = (user, club) => {
   const memberRole = getClubMemberRole(club, user?._id);
-  return memberRole === "MEMBER";
+  return VIEW_MEMBER_ROLES.includes(memberRole);
 };
 
 const validateElectionPayload = (body, isUpdate = false) => {

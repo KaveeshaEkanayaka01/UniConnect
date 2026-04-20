@@ -2,25 +2,27 @@ import axios from "axios";
 
 const API = "http://localhost:5000/api/projects";
 
+// GET all projects
 export const getProjects = () => axios.get(API);
 
-export const createProject = (data) =>
-  axios.post(`${API}/create`, data);
+// CREATE project
+export const createProject = (data) => axios.post(`${API}/create`, data);
 
-export const likeProject = (id) =>
-  axios.put(`http://localhost:5000/api/projects/like/${id}`);
+// LIKE project
+export const likeProject = (id) => axios.put(`${API}/like/${id}`);
 
-export const deleteProject = (id) =>
-  axios.delete(`${API}/${id}`);
+// DELETE project
+export const deleteProject = (id) => axios.delete(`${API}/${id}`);
 
-export const updateProject = (id, data) =>
-  axios.put(`${API}/${id}`, data);
+// UPDATE project
+export const updateProject = (id, data) => axios.put(`${API}/${id}`, data);
 
-export const addComment = (id, data) =>
-  axios.post(`${API}/comment/${id}`, data);
+// ADD comment
+export const addComment = (id, data) => axios.post(`${API}/comment/${id}`, data);
 
-export const getComments = (id) =>
-  axios.get(`${API}/comments/${id}`);
+// GET comments
+export const getComments = (id) => axios.get(`${API}/comments/${id}`);
 
+// DELETE comment
 export const deleteComment = (commentId) =>
   axios.delete(`${API}/comment/${commentId}`);

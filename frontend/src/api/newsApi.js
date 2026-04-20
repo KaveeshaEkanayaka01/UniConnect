@@ -1,9 +1,7 @@
-import axios from 'axios';
+import API from '../components/Auth/axios';
 
-const API_URL = 'http://localhost:5000/news'; // Backend URL
-
-export const getAllNews = () => axios.get(API_URL);
-export const getNewsById = (id) => axios.get(`${API_URL}/${id}`);
-export const createNews = (data) => axios.post(API_URL, data);
-export const updateNews = (id, data) => axios.put(`${API_URL}/${id}`, data);
-export const deleteNews = (id) => axios.delete(`${API_URL}/${id}`);
+export const getAllNews = () => API.get('/news');
+export const getNewsById = (id) => API.get(`/news/${id}`);
+export const createNews = (data) => API.post('/news', data);
+export const updateNews = (id, data) => API.put(`/news/${id}`, data);
+export const deleteNews = (id) => API.delete(`/news/${id}`);

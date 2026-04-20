@@ -75,65 +75,94 @@ const SkillsListPage  = () => {
     }
   };
 
-  return (
-    <div className="max-w-4xl mx-auto space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">Skill Management</h1>
-        <Link to="/skills/add" className="px-4 py-2 bg-indigo-600 text-white font-semibold rounded-lg hover:bg-indigo-700 transition-colors">Add New Skill</Link>
+return (
+  <div className="max-w-4xl mx-auto space-y-6 bg-[#ffffff] min-h-screen p-4">
+    
+    {/* Header */}
+    <div className="flex items-center justify-between">
+      <h1 className="text-2xl font-black text-[#0a1e8c]">Skill Management</h1>
+
+      <Link
+        to="/skills/add"
+        className="px-4 py-2 bg-[#f37021] text-white font-bold rounded-lg hover:bg-[#d85f1b] transition"
+      >
+        Add New Skill
+      </Link>
+    </div>
+
+    {/* Card */}
+    <div className="bg-white rounded-2xl shadow-sm border border-[#0a1e8c]/20 overflow-hidden">
+      
+      <div className="p-6 border-b border-[#0a1e8c]/10 bg-[#f5f8ff]">
+        <p className="text-[#4a5b86] text-sm font-medium">
+          Manage and showcase the professional and technical skills you've acquired during your university activities.
+        </p>
+
+        {error && <p className="text-red-600 mt-2">{error}</p>}
       </div>
 
-      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-        <div className="p-6 border-b border-gray-50 bg-gray-50">
-          <p className="text-gray-500 text-sm font-medium">Manage and showcase the professional and technical skills you've acquired during your university activities.</p>
-          {error && <p className="text-red-600 mt-2">{error}</p>}
-        </div>
-        
-        <ul className="divide-y divide-gray-100">
-          {!loading && renderedSkills.map((skill, index) => {
+      <ul className="divide-y divide-[#0a1e8c]/10">
+        {!loading &&
+          renderedSkills.map((skill, index) => {
             const resolvedSkillId = skill?.id || '';
             const skillLabel = skill?.name;
 
             return (
-            <li key={resolvedSkillId || skillLabel || index} className="p-6 flex items-center justify-between hover:bg-gray-50 transition-colors group">
-              <div className="flex items-center space-x-4">
-                <div className="w-10 h-10 rounded-lg bg-indigo-100 flex items-center justify-center text-indigo-600 font-bold">
-                  {index + 1}
+              <li
+                key={resolvedSkillId || skillLabel || index}
+                className="p-6 flex items-center justify-between hover:bg-[#f5f8ff] transition group"
+              >
+                <div className="flex items-center space-x-4">
+                  
+                  {/* Number Badge */}
+                  <div className="w-10 h-10 rounded-lg bg-[#f5f8ff] flex items-center justify-center text-[#0a1e8c] font-bold border border-[#0a1e8c]/20">
+                    {index + 1}
+                  </div>
+
+                  <div>
+                    <h3 className="font-black text-[#0a1e8c]">
+                      {skillLabel || 'Unknown Skill'}
+                    </h3>
+
+                    <p className="text-xs text-[#4a5b86]">
+                      {skill?.category ? `${skill.category.replace('_', ' ')} • ` : ''}
+                      {skill?.proficiency || 'Intermediate'}
+                      {skill?.relatedActivity ? ` • ${skill.relatedActivity}` : ''}
+                    </p>
+                  </div>
                 </div>
-                <div>
-                  <h3 className="font-bold text-gray-800">{skillLabel || 'Unknown Skill'}</h3>
-                  <p className="text-xs text-gray-400">
-                    {skill?.category ? `${skill.category.replace('_', ' ')} • ` : ''}
-                    {skill?.proficiency || 'Intermediate'}
-                    {skill?.relatedActivity ? ` • ${skill.relatedActivity}` : ''}
-                  </p>
+
+                {/* Actions */}
+                <div className="flex items-center space-x-3 opacity-0 group-hover:opacity-100 transition">
+                  <button
+                    onClick={() => handleRemove(resolvedSkillId)}
+                    disabled={!resolvedSkillId || removingId === resolvedSkillId}
+                    className="text-sm text-[#f37021] font-bold hover:underline disabled:opacity-60"
+                  >
+                    {removingId === resolvedSkillId ? 'Removing...' : 'Remove'}
+                  </button>
                 </div>
-              </div>
-              <div className="flex items-center space-x-3 opacity-0 group-hover:opacity-100 transition-opacity">
-                <button
-                  onClick={() => handleRemove(resolvedSkillId)}
-                  disabled={!resolvedSkillId || removingId === resolvedSkillId}
-                  className="text-sm text-red-500 font-bold hover:underline disabled:opacity-60"
-                >
-                  {removingId === resolvedSkillId ? 'Removing...' : 'Remove'}
-                </button>
-              </div>
-            </li>
+              </li>
             );
           })}
-          {!loading && renderedSkills.length === 0 && (
-            <li className="p-12 text-center">
-              <p className="text-gray-400 font-medium">No skills added yet. Start by adding one!</p>
-            </li>
-          )}
-          {loading && (
-            <li className="p-12 text-center">
-              <p className="text-gray-400 font-medium">Loading skills...</p>
-            </li>
-          )}
-        </ul>
-      </div>
+
+        {!loading && renderedSkills.length === 0 && (
+          <li className="p-12 text-center">
+            <p className="text-[#6b7bb5] font-medium">
+              No skills added yet. Start by adding one!
+            </p>
+          </li>
+        )}
+
+        {loading && (
+          <li className="p-12 text-center">
+            <p className="text-[#6b7bb5] font-medium">Loading skills...</p>
+          </li>
+        )}
+      </ul>
     </div>
-  );
+  </div>
+);
 };
 
 export default SkillsListPage;
