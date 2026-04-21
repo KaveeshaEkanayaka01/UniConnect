@@ -7,7 +7,6 @@ import Login from "./components/Auth/Login";
 
 // Public
 import LandingPage from "./components/landingPage";
-import HomePage from "./components/Home/HomePage";
 import VerificationPage from "./components/VerificationPage";
 
 // Core
@@ -90,7 +89,6 @@ const user = getCurrentUser();
       <Routes>
         {/* Public Routes */}
         <Route path="/" element={<LandingPage />} />
-        <Route path="/home" element={<HomePage />} />
         <Route path="/register" element={<Register />} />
         <Route path="/login" element={<Login />} />
         <Route path="/forgot-password" element={<ForgotPasswordPage />} />
