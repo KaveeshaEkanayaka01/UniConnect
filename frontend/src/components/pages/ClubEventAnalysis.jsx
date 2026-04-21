@@ -1,5 +1,4 @@
 import React, { useEffect, useMemo, useState } from "react";
-import axios from "axios";
 import { Bar, Pie, Line, Doughnut } from "react-chartjs-2";
 import {
   Chart as ChartJS,
@@ -21,6 +20,7 @@ import {
   RefreshCw,
   Download,
 } from "lucide-react";
+import API from "../../components/Auth/axios";
 import { getActiveClubs } from "../../services/clubService";
 
 ChartJS.register(
@@ -34,8 +34,6 @@ ChartJS.register(
   Tooltip,
   Legend
 );
-
-const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
 
 const formatNumber = (value) => Intl.NumberFormat().format(Number(value || 0));
 
@@ -53,9 +51,11 @@ const getClubName = (club) => String(club?.name || "Unnamed Club");
 
 const getActiveMemberCount = (club) => {
   if (!Array.isArray(club?.members)) return 0;
-  return club.members.filter(
-    (member) => normalizeText(member?.status) === "approved"
-  ).length;
+
+  return club.members.filter((member) => {
+    const status = normalizeText(member?.status);
+    return status === "approved" || status === "active";
+  }).length;
 };
 
 const getPendingJoinRequestCount = (club) => {
@@ -66,13 +66,19 @@ const getPendingJoinRequestCount = (club) => {
 };
 
 const getEventDate = (event) => {
-  const raw = event?.eventDate;
+  const raw =
+    event?.eventDate ||
+    event?.date ||
+    event?.startDate ||
+    event?.createdAt ||
+    null;
+
   const parsed = raw ? new Date(raw) : null;
   return parsed && !Number.isNaN(parsed.getTime()) ? parsed : null;
 };
 
 const getRegistrationDeadlineDate = (event) => {
-  const raw = event?.registrationDeadline;
+  const raw = event?.registrationDeadline || event?.deadline || null;
   const parsed = raw ? new Date(raw) : null;
   return parsed && !Number.isNaN(parsed.getTime()) ? parsed : null;
 };
@@ -188,6 +194,49 @@ const buildMonthlyTrend = (events) => {
   };
 };
 
+const getEventTitle = (event) =>
+  event?.eventTitle || event?.title || "Untitled Event";
+
+const getEventCategory = (event) => {
+  if (event?.eventCategory === "Other") {
+    return event?.customCategory || "Other";
+  }
+  return event?.eventCategory || event?.category || "Other";
+};
+
+const getEventVenue = (event) =>
+  String(event?.venue || event?.location || "Unknown Venue").trim() ||
+  "Unknown Venue";
+
+const getEventCapacity = (event) =>
+  Number(event?.studentCapacity || event?.capacity || 0);
+
+const getOrganisingClubName = (event) =>
+  String(
+    event?.organisingClubName ||
+      event?.clubName ||
+      event?.club?.name ||
+      event?.organizingClubName ||
+      ""
+  ).trim();
+
+const normalizeEventRecord = (event) => ({
+  ...event,
+  eventTitle: getEventTitle(event),
+  eventCategory: event?.eventCategory || event?.category || "Other",
+  customCategory: event?.customCategory || "",
+  eventDate:
+    event?.eventDate || event?.date || event?.startDate || event?.createdAt || "",
+  startTime: event?.startTime || "",
+  endTime: event?.endTime || "",
+  venue: getEventVenue(event),
+  studentCapacity: getEventCapacity(event),
+  organisingClubName: getOrganisingClubName(event),
+  organiserName: event?.organiserName || event?.organizerName || "",
+  organiserPhone: event?.organiserPhone || event?.organizerPhone || "",
+  registrationDeadline: event?.registrationDeadline || event?.deadline || "",
+});
+
 const ClubEventAnalysis = () => {
   const [rangePreset, setRangePreset] = useState("30d");
   const [rangeDays, setRangeDays] = useState(30);
@@ -201,6 +250,7 @@ const ClubEventAnalysis = () => {
   const loadAnalytics = async (showRefreshState = false) => {
     try {
       setError("");
+
       if (showRefreshState) {
         setRefreshing(true);
       } else {
@@ -209,11 +259,14 @@ const ClubEventAnalysis = () => {
 
       const [clubsResponse, eventsResponse] = await Promise.all([
         getActiveClubs(),
-        axios.get(`${API_URL}/api/events`),
+        API.get("/events"),
       ]);
 
-      setClubs(safeArray(clubsResponse));
-      setEvents(safeArray(eventsResponse.data));
+      const clubData = safeArray(clubsResponse);
+      const eventData = safeArray(eventsResponse?.data).map(normalizeEventRecord);
+
+      setClubs(clubData);
+      setEvents(eventData);
     } catch (loadError) {
       console.error("Failed to load analytics:", loadError);
       setError(
@@ -248,15 +301,14 @@ const ClubEventAnalysis = () => {
       const clubName = getClubName(club);
 
       const matchedEvents = rangedEvents.filter(
-        (event) => normalizeText(event.organisingClubName) === normalizeText(clubName)
+        (event) =>
+          normalizeText(getOrganisingClubName(event)) === normalizeText(clubName)
       );
 
       const categoryMap = new Map();
+
       matchedEvents.forEach((event) => {
-        const category =
-          event?.eventCategory === "Other"
-            ? event?.customCategory || "Other"
-            : event?.eventCategory || "Other";
+        const category = getEventCategory(event);
         categoryMap.set(category, (categoryMap.get(category) || 0) + 1);
       });
 
@@ -269,7 +321,7 @@ const ClubEventAnalysis = () => {
         upcomingEvents: matchedEvents.filter(isUpcomingEvent).length,
         registrationOpenEvents: matchedEvents.filter(isRegistrationOpen).length,
         totalCapacity: matchedEvents.reduce(
-          (sum, event) => sum + Number(event.studentCapacity || 0),
+          (sum, event) => sum + getEventCapacity(event),
           0
         ),
         matchedEvents,
@@ -298,7 +350,8 @@ const ClubEventAnalysis = () => {
     if (!selected) return [];
 
     return rangedEvents.filter(
-      (event) => normalizeText(event.organisingClubName) === normalizeText(selected)
+      (event) =>
+        normalizeText(getOrganisingClubName(event)) === normalizeText(selected)
     );
   }, [rangedEvents, selectedClub, selectedClubMetrics]);
 
@@ -363,11 +416,7 @@ const ClubEventAnalysis = () => {
     const categoryMap = new Map();
 
     visibleEvents.forEach((event) => {
-      const category =
-        event?.eventCategory === "Other"
-          ? event?.customCategory || "Other"
-          : event?.eventCategory || "Other";
-
+      const category = getEventCategory(event);
       categoryMap.set(category, (categoryMap.get(category) || 0) + 1);
     });
 
@@ -398,7 +447,7 @@ const ClubEventAnalysis = () => {
     const venueMap = new Map();
 
     visibleEvents.forEach((event) => {
-      const venue = String(event?.venue || "Unknown Venue").trim() || "Unknown Venue";
+      const venue = getEventVenue(event);
       venueMap.set(venue, (venueMap.get(venue) || 0) + 1);
     });
 
@@ -457,16 +506,14 @@ const ClubEventAnalysis = () => {
         "Registration Deadline",
       ],
       ...visibleEvents.map((event) => [
-        event.eventTitle || "",
-        event.eventCategory === "Other"
-          ? event.customCategory || "Other"
-          : event.eventCategory || "",
+        getEventTitle(event),
+        getEventCategory(event),
         event.eventDate || "",
         event.startTime || "",
         event.endTime || "",
-        event.venue || "",
-        event.studentCapacity || 0,
-        event.organisingClubName || "",
+        getEventVenue(event),
+        getEventCapacity(event),
+        getOrganisingClubName(event),
         event.organiserName || "",
         event.organiserPhone || "",
         event.registrationDeadline || "",
@@ -493,7 +540,8 @@ const ClubEventAnalysis = () => {
               Visual insights for clubs and events
             </h1>
             <p className="mt-2 max-w-3xl text-sm font-medium text-[#4a5b86] sm:text-base">
-              This dashboard uses active clubs and the general event records from the event module.
+              This dashboard uses active clubs and real event records from the
+              backend.
             </p>
           </div>
 
