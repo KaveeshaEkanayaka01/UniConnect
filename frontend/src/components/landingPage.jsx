@@ -16,6 +16,12 @@ import {
   ChevronRight,
   Menu,
   X,
+  Mail,
+  Phone,
+  MapPin,
+  Facebook,
+  Instagram,
+  Linkedin,
 } from "lucide-react";
 
 const LandingPage = () => {
@@ -595,8 +601,106 @@ const LandingPage = () => {
     </section>
 
     {/* Footer */}
-    <footer className="bg-[#0B1E8A] text-center py-6 text-sm text-gray-300">
-      UniConnect Student Platform
+    <footer className="relative overflow-hidden bg-[#06145f] text-white">
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(243,108,33,0.2),transparent_40%),radial-gradient(circle_at_bottom_left,rgba(255,255,255,0.08),transparent_40%)]" />
+
+      <div className="relative max-w-7xl mx-auto px-4 py-12">
+        <div className="grid gap-10 md:grid-cols-2 lg:grid-cols-4">
+          <div>
+            <div className="flex items-center gap-3">
+              <img src={appLogo} alt="UniConnect" className="h-10 w-10 rounded-lg" />
+              <div>
+                <p className="text-lg font-black tracking-tight">UniConnect</p>
+                <p className="text-xs text-white/70">Student Engagement Platform</p>
+              </div>
+            </div>
+            <p className="mt-4 text-sm leading-relaxed text-white/80">
+              Build stronger campus communities with seamless club management, event
+              collaboration, and student growth tools.
+            </p>
+          </div>
+
+          <div>
+            <h4 className="text-sm font-black uppercase tracking-[0.18em] text-[#f6b04f]">
+              Quick Links
+            </h4>
+            <ul className="mt-4 space-y-2 text-sm text-white/80">
+              {navLinks.map((item) => (
+                <li key={item.label}>
+                  <a href={item.href} className="hover:text-white transition-colors">
+                    {item.label}
+                  </a>
+                </li>
+              ))}
+              <li>
+                <Link to="/login" className="hover:text-white transition-colors">
+                  Login
+                </Link>
+              </li>
+              <li>
+                <Link to="/register" className="hover:text-white transition-colors">
+                  Register
+                </Link>
+              </li>
+            </ul>
+          </div>
+
+          <div>
+            <h4 className="text-sm font-black uppercase tracking-[0.18em] text-[#f6b04f]">
+              Contact
+            </h4>
+            <ul className="mt-4 space-y-3 text-sm text-white/80">
+              <li className="flex items-start gap-2.5">
+                <MapPin size={16} className="mt-0.5 text-[#f6b04f]" />
+                <span>SLIIT Malabe Campus, New Kandy Road, Malabe</span>
+              </li>
+              <li className="flex items-center gap-2.5">
+                <Phone size={16} className="text-[#f6b04f]" />
+                <span>+94 11 754 4801</span>
+              </li>
+              <li className="flex items-center gap-2.5">
+                <Mail size={16} className="text-[#f6b04f]" />
+                <span>hello@uniconnect.edu</span>
+              </li>
+            </ul>
+          </div>
+
+          <div>
+            <h4 className="text-sm font-black uppercase tracking-[0.18em] text-[#f6b04f]">
+              Follow Us
+            </h4>
+            <div className="mt-4 flex items-center gap-3">
+              <a
+                href="#"
+                aria-label="Facebook"
+                className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-white/20 bg-white/10 text-white/80 transition hover:bg-white/20 hover:text-white"
+              >
+                <Facebook size={18} />
+              </a>
+              <a
+                href="#"
+                aria-label="Instagram"
+                className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-white/20 bg-white/10 text-white/80 transition hover:bg-white/20 hover:text-white"
+              >
+                <Instagram size={18} />
+              </a>
+              <a
+                href="#"
+                aria-label="LinkedIn"
+                className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-white/20 bg-white/10 text-white/80 transition hover:bg-white/20 hover:text-white"
+              >
+                <Linkedin size={18} />
+              </a>
+            </div>
+            <p className="mt-4 text-xs text-white/60">Version 1.0 | Built for Campus Life</p>
+          </div>
+        </div>
+
+        <div className="mt-10 border-t border-white/15 pt-5 text-xs text-white/60 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          <p>© {new Date().getFullYear()} UniConnect. All rights reserved.</p>
+          <p>Designed for students, clubs, and university communities.</p>
+        </div>
+      </div>
     </footer>
   </div>
 );

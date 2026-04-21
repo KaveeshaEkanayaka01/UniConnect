@@ -3,6 +3,7 @@ import { getAllNews, deleteNews, createNews, updateNews } from '../../api/newsAp
 import toast from 'react-hot-toast';
 import NewsList from '../../components/NewsComponents/NewsList.jsx';
 import NewsForm from '../../components/NewsComponents/NewsForm.jsx';
+import AdminPagesTopBar from '../AdminPagesTopBar.jsx';
 import { useNavigate } from 'react-router-dom';
 
 const NewsPage = () => {
@@ -77,25 +78,20 @@ const NewsPage = () => {
       className="min-h-screen bg-slate-50 p-8"
       style={{ fontFamily: "'Inter', sans-serif" }}
     >
+      <AdminPagesTopBar
+        title="Admin News Control Panel"
+        subtitle="Create, edit, and oversee club announcements and updates."
+      />
+
       {view === 'list' ? (
         <>
           {/* ACTIONS BAR */}
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
             <div>
-              <div className="flex items-center gap-3 mb-3">
-                <button
-                  onClick={() => navigate('/admin')}
-                  className="inline-flex items-center gap-2 px-3 py-1.5 rounded-md bg-white border border-slate-200 text-slate-700 text-sm font-semibold shadow-sm hover:bg-slate-50"
-                >
-                  ← Back to Admin Panel
-                </button>
-              </div>
               <h2 className="text-2xl font-black text-slate-800 tracking-tight">
                 Manage News
               </h2>
-              <p className="text-slate-500 text-sm mt-1">
-                Create, edit, and oversee club announcements and updates.
-              </p>
+              
             </div>
             <button
               onClick={() => {
@@ -222,13 +218,6 @@ const NewsPage = () => {
                   d="M10 19l-7-7m0 0l7-7m-7 7h18"
                 />
               </svg>
-            </button>
-
-            <button
-              onClick={() => navigate('/admin')}
-              className="inline-flex items-center gap-2 px-3 py-2 rounded-xl bg-white border border-slate-200 text-slate-700 text-sm font-semibold shadow-sm hover:bg-slate-50"
-            >
-              Back to Admin Panel
             </button>
 
             <div>
