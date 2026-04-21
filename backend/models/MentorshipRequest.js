@@ -20,7 +20,6 @@ const mentorshipRequestSchema = new mongoose.Schema(
     message: {
       type: String,
       trim: true,
-      maxlength: 500,
       default: "",
     },
     studentSkills: {
@@ -33,19 +32,19 @@ const mentorshipRequestSchema = new mongoose.Schema(
     },
     studentLevel: {
       type: String,
-      enum: ["Beginner", "Intermediate", "Advanced"],
+      enum: ["Beginner", "Intermediate", "Advanced", "Expert"],
       default: "Beginner",
     },
     matchScore: {
       type: Number,
-      default: 0,
       min: 0,
-      max: 1,
+      max: 100,
+      default: 0,
     },
     status: {
       type: String,
-      enum: ["PENDING", "ACCEPTED", "REJECTED", "COMPLETED", "CANCELLED"],
-      default: "PENDING",
+      enum: ["pending", "accepted", "completed", "rejected", "cancelled"],
+      default: "pending",
     },
     respondedAt: {
       type: Date,
@@ -57,7 +56,7 @@ const mentorshipRequestSchema = new mongoose.Schema(
 
 mentorshipRequestSchema.index(
   { club: 1, student: 1, mentor: 1, status: 1 },
-  { unique: false }
+  { name: "club_student_mentor_status_idx" }
 );
 
 export default mongoose.model("MentorshipRequest", mentorshipRequestSchema);

@@ -9,7 +9,9 @@ import {
   getRecommendedMentors,
   createMentorshipRequest,
   getMyMentorshipRequests,
+  getMyMentorships,
   getMentorRequests,
+  getMentorMentorships,
   updateMentorshipRequestStatus,
 } from "../controllers/mentorshipController.js";
 
@@ -46,8 +48,13 @@ router.delete(
 router.get("/club/:clubId/mentors", protect, getClubMentors);
 router.post("/club/:clubId/recommend", protect, getRecommendedMentors);
 router.post("/club/:clubId/request", protect, createMentorshipRequest);
+
 router.get("/my-requests", protect, getMyMentorshipRequests);
+router.get("/my-mentorships", protect, getMyMentorships);
+
 router.get("/mentor-requests", protect, getMentorRequests);
+router.get("/mentor-mentorships", protect, getMentorMentorships);
+
 router.put("/request/:requestId/status", protect, updateMentorshipRequestStatus);
 
 export default router;

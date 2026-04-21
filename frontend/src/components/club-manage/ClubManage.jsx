@@ -29,7 +29,6 @@ import Election from "./Election";
 import ClubMeeting from "./ClubMeeting";
 import ClubExpenses from "./ClubExpenses";
 import MentorshipTab from "./MentorshipTab";
-import CreateMentorProfile from "./CreateMentorProfile";
 import ClubSettingsTab from "./ClubSettingsTab";
 
 const roleOptions = [
@@ -87,10 +86,6 @@ const ClubManage = () => {
     return String(currentUser?.role || "").trim().toUpperCase();
   }, [currentUser]);
 
-  const membershipRole = useMemo(() => {
-    return String(dashboard?.membership?.role || "").trim().toLowerCase();
-  }, [dashboard]);
-
   const isSystemAdmin = useMemo(() => {
     return normalizedSystemRole === "SYSTEM_ADMIN";
   }, [normalizedSystemRole]);
@@ -101,20 +96,6 @@ const ClubManage = () => {
     isSystemAdmin || dashboard?.permissions?.canManageClub;
   const canManageSettings =
     isSystemAdmin || dashboard?.permissions?.canManageClub;
-
-  const canCreateMentorProfile = useMemo(() => {
-    if (isSystemAdmin) return true;
-
-    if (["club_admin", "president", "vice_president"].includes(membershipRole)) {
-      return true;
-    }
-
-    if (["CLUB_ADMIN", "SYSTEM_ADMIN"].includes(normalizedSystemRole)) {
-      return true;
-    }
-
-    return !!dashboard?.permissions?.canManageClub;
-  }, [isSystemAdmin, membershipRole, normalizedSystemRole, dashboard]);
 
   const loadData = async () => {
     try {
@@ -467,17 +448,11 @@ const ClubManage = () => {
       </div>
 
       {activeTab === "mentorship" && (
-        <div className="space-y-6">
-          {canCreateMentorProfile && (
-            <CreateMentorProfile clubId={clubId} onCreated={loadData} />
-          )}
-
-          <MentorshipTab
-            clubId={clubId}
-            currentUser={currentUser}
-            dashboard={dashboard}
-          />
-        </div>
+        <MentorshipTab
+          clubId={clubId}
+          currentUser={currentUser}
+          dashboard={dashboard}
+        />
       )}
 
       {activeTab === "budgets" && (
@@ -607,7 +582,8 @@ const ClubManage = () => {
             <div>
               <h2 className="text-2xl font-black text-[#0a1e8c]">Members</h2>
               <p className="mt-2 text-sm text-[#4a5b86]">
-                Manage club members, update their roles, and remove access when needed.
+                Manage club members, update their roles, and remove access when
+                needed.
               </p>
             </div>
 
