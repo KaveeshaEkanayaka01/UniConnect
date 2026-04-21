@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
+import toast from "react-hot-toast";
 import API from "../Auth/axios";
 
 const ELECTION_POSITIONS = [
@@ -487,9 +488,10 @@ export default function Election({
     try {
       await API.delete(`/elections/${electionId}`);
       setElections((prev) => prev.filter((item) => item._id !== electionId));
+      toast.success("Election deleted successfully");
     } catch (error) {
       console.error("Delete election error:", error);
-      alert(error?.response?.data?.message || "Failed to delete election");
+      toast.error(error?.response?.data?.message || "Failed to delete election");
     }
   };
 
@@ -554,10 +556,11 @@ export default function Election({
         setElections((prev) => [newElection, ...prev]);
       }
 
+      toast.success(editingElectionId ? "Election updated successfully" : "Election created successfully");
       resetForm();
     } catch (error) {
       console.error("Submit election error:", error);
-      alert(error?.response?.data?.message || "Failed to save election");
+      toast.error(error?.response?.data?.message || "Failed to save election");
     } finally {
       setSubmitting(false);
     }

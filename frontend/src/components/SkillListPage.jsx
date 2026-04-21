@@ -1,6 +1,7 @@
 
 import React, { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
+import toast from 'react-hot-toast';
 import API from './Auth/axios';
 
 const SkillsListPage  = () => {
@@ -51,7 +52,9 @@ const SkillsListPage  = () => {
       const res = await API.get('/student/dashboard');
       setSkillRows(deriveSkillRows(res.data?.profile));
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to load skills');
+      const message = err.response?.data?.message || 'Failed to load skills';
+      setError(message);
+      toast.error(message);
     } finally {
       setLoading(false);
     }
@@ -68,8 +71,11 @@ const SkillsListPage  = () => {
       setRemovingId(skillId);
       const res = await API.delete(`/student/skills/${skillId}`);
       setSkillRows(deriveSkillRows(res.data));
+      toast.success('Skill removed successfully');
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to remove skill');
+      const message = err.response?.data?.message || 'Failed to remove skill';
+      setError(message);
+      toast.error(message);
     } finally {
       setRemovingId('');
     }

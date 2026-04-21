@@ -18,24 +18,24 @@ const NewsItem = ({ news, onEdit, onDelete, isAdminView = false }) => {
 
   if (isAdminView) {
     return (
-      <div className="glass-card p-4 bg-white hover:shadow-md transition-all duration-300 border border-slate-100 group relative overflow-hidden mb-3">
+      <div className="glass-card p-6 bg-white hover:shadow-md transition-all duration-300 border border-slate-100 group relative overflow-hidden mb-3 rounded-2xl">
         {/* Left accent */}
         <div className="absolute top-0 left-0 bottom-0 w-1 bg-gradient-to-b from-indigo-500 to-sky-500 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
         
-        <div className="flex flex-col gap-3">
+        <div className="flex flex-col gap-4">
           <div className="flex items-start justify-between gap-4">
             <div>
-              <h3 className="font-extrabold text-slate-800 text-sm leading-tight group-hover:text-indigo-600 transition-colors uppercase tracking-tight">
+              <h3 className="font-extrabold text-slate-900 text-2xl leading-tight group-hover:text-indigo-600 transition-colors uppercase tracking-tight">
                 {news.title}
               </h3>
-              <div className="flex items-center gap-3 mt-1">
-                <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${badgeClass}`}>
+              <div className="flex flex-wrap items-center gap-3 mt-3">
+                <span className={`text-sm font-bold px-3 py-1 rounded-full border ${badgeClass}`}>
                   {news.category || 'Uncategorized'}
                 </span>
-                <span className="text-[10px] text-slate-400 font-bold flex items-center gap-1">
+                <span className="text-sm text-slate-500 font-semibold flex items-center gap-1">
                    <span>👤</span> {news.author}
                 </span>
-                <span className="text-[10px] text-slate-400 font-bold flex items-center gap-1">
+                <span className="text-sm text-slate-500 font-semibold flex items-center gap-1">
                    <span>📅</span> {news.publishedDate ? new Date(news.publishedDate).toLocaleDateString() : 'N/A'}
                 </span>
               </div>
@@ -63,14 +63,14 @@ const NewsItem = ({ news, onEdit, onDelete, isAdminView = false }) => {
             </div>
           </div>
           
-          <p className="text-slate-500 text-[11px] leading-relaxed font-medium bg-slate-50/50 p-2 rounded-lg border border-slate-100/50">
+          <p className="text-slate-600 text-base leading-7 font-medium bg-slate-50/70 p-4 rounded-xl border border-slate-100/70">
             {isLong && !expanded ? `${content.slice(0, PREVIEW_LENGTH).trim()}...` : content}
           </p>
           {isLong && (
             <div className="pt-1">
               <button
                 onClick={() => setExpanded((s) => !s)}
-                className="text-xs text-indigo-600 font-semibold hover:underline"
+                className="text-sm text-indigo-600 font-semibold hover:underline"
               >
                 {expanded ? 'Show less' : 'Read more'}
               </button>
@@ -83,11 +83,11 @@ const NewsItem = ({ news, onEdit, onDelete, isAdminView = false }) => {
 
   // Public/Standard view
   return (
-    <div className="glass-card p-6 bg-white hover:shadow-lg transition-all duration-300 group relative overflow-hidden">
+    <div className="glass-card p-6 bg-white hover:shadow-lg transition-all duration-300 group relative overflow-hidden rounded-2xl border border-slate-100">
       <div className="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-indigo-500 to-sky-500 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
 
       <div className="flex items-start justify-between gap-3 mb-3">
-        <h3 className="text-slate-800 font-semibold text-lg leading-tight group-hover:text-indigo-600 transition-colors">
+        <h3 className="text-slate-900 font-semibold text-2xl leading-tight group-hover:text-indigo-600 transition-colors">
           {news.title}
         </h3>
         {news.category && (
@@ -97,21 +97,21 @@ const NewsItem = ({ news, onEdit, onDelete, isAdminView = false }) => {
         )}
       </div>
 
-      <p className="text-slate-500 text-sm leading-relaxed mb-4">
+      <p className="text-slate-600 text-base leading-7 mb-4">
         {isLong && !expanded ? `${content.slice(0, PREVIEW_LENGTH).trim()}...` : content}
       </p>
       {isLong && (
         <div className="mb-4">
           <button
             onClick={() => setExpanded((s) => !s)}
-            className="text-sm text-indigo-600 font-semibold hover:underline"
+            className="text-base text-indigo-600 font-semibold hover:underline"
           >
             {expanded ? 'Show less' : 'Read more'}
           </button>
         </div>
       )}
 
-      <div className="flex items-center gap-4 text-xs text-slate-400 mb-4">
+      <div className="flex items-center gap-4 text-sm text-slate-500 mb-4">
         <span className="flex items-center gap-1">
           <span>👤</span> {news.author}
         </span>

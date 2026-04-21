@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
+import toast from "react-hot-toast";
 import API from "./Auth/axios";
 import {
   BadgeCheck,
@@ -459,7 +460,7 @@ const BadgeCertificationPage = () => {
 
       doc.save(`${safeFileNamePart}-details.pdf`);
     } catch (pdfError) {
-      window.alert(pdfError?.message || "Failed to download certificate PDF");
+      toast.error(pdfError?.message || "Failed to download certificate PDF");
     } finally {
       setDownloadingCertificateId("");
     }
@@ -500,7 +501,7 @@ const BadgeCertificationPage = () => {
 
       closeCertificatePreview();
     } catch (deleteError) {
-      window.alert(deleteError?.response?.data?.message || "Failed to delete certificate");
+      toast.error(deleteError?.response?.data?.message || "Failed to delete certificate");
     } finally {
       setDeletingCertificateId("");
     }

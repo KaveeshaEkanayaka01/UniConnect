@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
+import toast from "react-hot-toast";
 import API from "./Auth/axios";
 
 const ProjectCard = ({ project }) => {
@@ -16,18 +17,19 @@ const ProjectCard = ({ project }) => {
 
   const description = project?.description || "No description available.";
   const shouldShowReadMore = description.length > 140;
-  const projectImages = Array.isArray(project?.images)
-    ? project.images.filter(Boolean)
-    : [];
+  const projectImages = Array.isArray(project?.images) ? project.images.filter(Boolean) : [];
+  const rawProjectDate = project?.createdAt || project?.projectDate || project?.uploadDate;
+  const formattedProjectDate = rawProjectDate
+    ? new Date(rawProjectDate).toLocaleDateString(undefined, {
+        year: "numeric",
+        month: "short",
+        day: "numeric",
+      })
+    : "Not available";
 
-  const imageUrls = projectImages.map(
-    (img) => `http://localhost:5000/uploads/${img}`
-  );
-
+  const imageUrls = projectImages.map((img) => `http://localhost:5000/uploads/${img}`);
   const hasImages = imageUrls.length > 0;
-  const activeImage = hasImages
-    ? imageUrls[Math.min(activeImageIndex, imageUrls.length - 1)]
-    : null;
+  const activeImage = hasImages ? imageUrls[Math.min(activeImageIndex, imageUrls.length - 1)] : null;
 
   useEffect(() => {
     setActiveImageIndex(0);
@@ -41,9 +43,7 @@ const ProjectCard = ({ project }) => {
     }
 
     try {
-      const res = await axios.get(
-        `http://localhost:5000/api/projects/comments/${project._id}`
-      );
+      const res = await axios.get(`http://localhost:5000/api/projects/comments/${project._id}`);
       setComments(Array.isArray(res.data) ? res.data : []);
     } catch (error) {
       console.error("Error loading comments:", error);
@@ -66,9 +66,7 @@ const ProjectCard = ({ project }) => {
     const likedBy = Array.isArray(project?.likedBy) ? project.likedBy : [];
 
     setHasLiked(
-      currentUserId
-        ? likedBy.some((id) => String(id) === currentUserId)
-        : false
+      currentUserId ? likedBy.some((id) => String(id) === currentUserId) : false
     );
     setLikes(project?.likes || 0);
     fetchComments();
@@ -79,17 +77,15 @@ const ProjectCard = ({ project }) => {
 
     try {
       setLiking(true);
-
       const res = await API.put(`/projects/like/${project._id}`);
-
       setLikes(res.data?.likes || 0);
       setHasLiked(Boolean(res.data?.liked));
     } catch (error) {
       console.error("Error liking project:", error);
       if (error?.response?.status === 401) {
-        alert("Please login to like this project.");
+        toast.error("Please login to like this project.");
       } else {
-        alert("Failed to update like");
+        toast.error("Failed to update like");
       }
     } finally {
       setLiking(false);
@@ -100,33 +96,31 @@ const ProjectCard = ({ project }) => {
     e.preventDefault();
 
     if (!text.trim()) {
-      alert("Please type a comment.");
+      toast.error("Please type a comment.");
       return;
     }
 
     try {
       setSubmittingComment(true);
-
       await API.post(`/projects/comment/${project._id}`, { text });
-
       setText("");
       await fetchComments();
     } catch (error) {
       console.error("Error adding comment:", error);
-      alert("Failed to add comment");
+      toast.error("Failed to add comment");
     } finally {
       setSubmittingComment(false);
     }
   };
 
   return (
-    <div className="h-full bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden hover:shadow-md transition flex flex-col">
+    <div className="flex h-full flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition hover:shadow-md">
       {hasImages && (
-        <div className="relative w-full aspect-[4/3] bg-slate-100 overflow-hidden">
+        <div className="relative aspect-[4/3] w-full overflow-hidden bg-slate-100">
           <img
             src={activeImage}
             alt={project?.projectName || "Project"}
-            className="w-full h-full object-cover object-center"
+            className="h-full w-full object-cover object-center"
           />
 
           {imageUrls.length > 1 && (
@@ -134,11 +128,9 @@ const ProjectCard = ({ project }) => {
               <button
                 type="button"
                 onClick={() =>
-                  setActiveImageIndex((prev) =>
-                    prev === 0 ? imageUrls.length - 1 : prev - 1
-                  )
+                  setActiveImageIndex((prev) => (prev === 0 ? imageUrls.length - 1 : prev - 1))
                 }
-                className="absolute left-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-slate-900/60 text-white hover:bg-slate-900/80 transition"
+                className="absolute left-2 top-1/2 h-8 w-8 -translate-y-1/2 rounded-full bg-slate-900/60 text-white transition hover:bg-slate-900/80"
                 aria-label="Previous image"
               >
                 &#8249;
@@ -147,17 +139,15 @@ const ProjectCard = ({ project }) => {
               <button
                 type="button"
                 onClick={() =>
-                  setActiveImageIndex((prev) =>
-                    prev === imageUrls.length - 1 ? 0 : prev + 1
-                  )
+                  setActiveImageIndex((prev) => (prev === imageUrls.length - 1 ? 0 : prev + 1))
                 }
-                className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-slate-900/60 text-white hover:bg-slate-900/80 transition"
+                className="absolute right-2 top-1/2 h-8 w-8 -translate-y-1/2 rounded-full bg-slate-900/60 text-white transition hover:bg-slate-900/80"
                 aria-label="Next image"
               >
                 &#8250;
               </button>
 
-              <div className="absolute right-2 bottom-2 px-2 py-1 rounded-md bg-slate-900/65 text-white text-xs font-semibold">
+              <div className="absolute bottom-2 right-2 rounded-md bg-slate-900/65 px-2 py-1 text-xs font-semibold text-white">
                 {activeImageIndex + 1}/{imageUrls.length}
               </div>
             </>
@@ -166,45 +156,35 @@ const ProjectCard = ({ project }) => {
       )}
 
       {imageUrls.length > 1 && (
-        <div className="px-3 pt-3 flex gap-2 overflow-x-auto">
+        <div className="flex gap-2 overflow-x-auto px-3 pt-3">
           {imageUrls.map((url, idx) => (
             <button
               key={url}
               type="button"
               onClick={() => setActiveImageIndex(idx)}
-              className={`w-14 h-14 rounded-lg overflow-hidden border-2 flex-shrink-0 transition ${
+              className={`h-14 w-14 flex-shrink-0 overflow-hidden rounded-lg border-2 transition ${
                 activeImageIndex === idx
                   ? "border-indigo-500"
                   : "border-transparent hover:border-slate-300"
               }`}
               aria-label={`Show image ${idx + 1}`}
             >
-              <img
-                src={url}
-                alt={`Project image ${idx + 1}`}
-                className="w-full h-full object-cover object-center"
-              />
+              <img src={url} alt={`Project image ${idx + 1}`} className="h-full w-full object-cover object-center" />
             </button>
           ))}
         </div>
       )}
 
-      <div className="p-5 flex-1 flex flex-col">
-        <div className="flex items-start justify-between gap-3 mb-3">
-          <h3 className="text-lg font-bold text-slate-900">
-            {project?.projectName || "Untitled Project"}
-          </h3>
+      <div className="flex flex-1 flex-col p-5">
+        <div className="mb-3 flex items-start justify-between gap-3">
+          <h3 className="text-lg font-bold text-slate-900">{project?.projectName || "Untitled Project"}</h3>
 
-          <span className="px-2.5 py-1 rounded-full text-xs font-semibold bg-indigo-50 text-indigo-700 whitespace-nowrap">
+          <span className="whitespace-nowrap rounded-full bg-indigo-50 px-2.5 py-1 text-xs font-semibold text-indigo-700">
             {project?.status || "Ongoing"}
           </span>
         </div>
 
-        <p
-          className={`text-sm text-slate-600 mb-1 ${
-            showFullDescription ? "" : "line-clamp-3"
-          }`}
-        >
+        <p className={`mb-1 text-sm text-slate-600 ${showFullDescription ? "" : "line-clamp-3"}`}>
           {description}
         </p>
 
@@ -212,123 +192,95 @@ const ProjectCard = ({ project }) => {
           <button
             type="button"
             onClick={() => setShowFullDescription((prev) => !prev)}
-            className="text-sm font-semibold text-indigo-600 hover:text-indigo-700 mb-3"
+            className="mb-3 text-sm font-semibold text-indigo-600 hover:text-indigo-700"
           >
             {showFullDescription ? "Read Less" : "Read More"}
           </button>
         )}
 
-        <div className="space-y-1 text-sm text-slate-500 mb-4">
+        <div className="mb-4 space-y-1 text-sm text-slate-500">
           <p>
-            <span className="font-medium text-slate-700">Category:</span>{" "}
-            {project?.category || "-"}
+            <span className="font-medium text-slate-700">Category:</span> {project?.category || "-"}
           </p>
           <p>
-            <span className="font-medium text-slate-700">Club:</span>{" "}
-            {project?.clubName || "-"}
+            <span className="font-medium text-slate-700">Club:</span> {project?.clubName || "-"}
+          </p>
+          <p>
+            <span className="font-medium text-slate-700">Upload Date:</span> {formattedProjectDate}
           </p>
         </div>
 
-        <div className="mt-auto grid grid-cols-2 gap-3 border-t border-slate-200 pt-4 mb-4">
+        <div className="mt-auto mb-4 grid grid-cols-2 gap-3 border-t border-slate-200 pt-4">
           <button
             type="button"
             onClick={handleLike}
             disabled={liking}
             aria-pressed={hasLiked}
-            className={`h-11 rounded-xl border text-sm font-semibold transition disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2 ${
+            className={`flex h-11 items-center justify-center gap-2 rounded-xl border text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-60 ${
               hasLiked
-                ? "bg-indigo-50 border-indigo-200 text-indigo-700"
-                : "bg-white border-slate-200 text-slate-700 hover:border-indigo-200 hover:text-indigo-700"
+                ? "border-indigo-200 bg-indigo-50 text-indigo-700"
+                : "border-slate-200 bg-white text-slate-700 hover:border-indigo-200 hover:text-indigo-700"
             }`}
           >
-            <svg
-              className="w-4 h-4"
-              fill={hasLiked ? "currentColor" : "none"}
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-              aria-hidden="true"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth="2"
-                d="M14 9V5a3 3 0 00-6 0v4M5 11h14l-1 8H6l-1-8z"
-              />
+            <svg className="h-4 w-4" fill={hasLiked ? "currentColor" : "none"} stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M14 9V5a3 3 0 00-6 0v4M5 11h14l-1 8H6l-1-8z" />
             </svg>
-            <span>{hasLiked ? "Liked" : "Like"} ({likes})</span>
+            <span>
+              {hasLiked ? "Liked" : "Like"} ({likes})
+            </span>
           </button>
 
           <button
             type="button"
             onClick={() => setShowComments((prev) => !prev)}
             aria-expanded={showComments}
-            className={`h-11 rounded-xl border text-sm font-semibold transition flex items-center justify-center gap-2 ${
+            className={`flex h-11 items-center justify-center gap-2 rounded-xl border text-sm font-semibold transition ${
               showComments
-                ? "bg-slate-100 border-slate-300 text-slate-900"
-                : "bg-white border-slate-200 text-slate-700 hover:border-indigo-200 hover:text-indigo-700"
+                ? "border-slate-300 bg-slate-100 text-slate-900"
+                : "border-slate-200 bg-white text-slate-700 hover:border-indigo-200 hover:text-indigo-700"
             }`}
           >
-            <svg
-              className="w-4 h-4"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-              aria-hidden="true"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth="2"
-                d="M8 10h8M8 14h5m8-2a9 9 0 11-18 0 9 9 0 0118 0z"
-              />
+            <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 10h8M8 14h5m8-2a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
-            <span>{showComments ? "Hide" : "Comments"} ({comments.length})</span>
+            <span>
+              {showComments ? "Hide" : "Comments"} ({comments.length})
+            </span>
           </button>
         </div>
 
         {showComments && (
           <div className="border-t border-slate-200 pt-4">
-            <h4 className="text-sm font-semibold text-slate-800 mb-3">
-              Add Comment
-            </h4>
+            <h4 className="mb-3 text-sm font-semibold text-slate-800">Add Comment</h4>
 
-            <form onSubmit={handleAddComment} className="space-y-3 mb-5">
+            <form onSubmit={handleAddComment} className="mb-5 space-y-3">
               <textarea
                 placeholder="Write a comment..."
                 value={text}
                 onChange={(e) => setText(e.target.value)}
                 rows="3"
-                className="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-indigo-500 resize-none"
+                className="w-full resize-none rounded-xl border border-slate-200 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none"
               />
 
               <button
                 type="submit"
                 disabled={submittingComment}
-                className="px-4 py-2 rounded-xl bg-indigo-600 text-white text-sm font-medium hover:bg-indigo-700 disabled:opacity-60"
+                className="rounded-xl bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-60"
               >
                 {submittingComment ? "Posting..." : "Post Comment"}
               </button>
             </form>
 
-            <h4 className="text-sm font-semibold text-slate-800 mb-3">
-              Comments
-            </h4>
+            <h4 className="mb-3 text-sm font-semibold text-slate-800">Comments</h4>
 
             {loadingComments ? (
               <p className="text-sm text-slate-400">Loading comments...</p>
             ) : comments.length > 0 ? (
-              <div className="space-y-3 max-h-48 overflow-y-auto pr-1">
+              <div className="max-h-48 space-y-3 overflow-y-auto pr-1">
                 {comments.map((comment) => (
-                  <div
-                    key={comment._id}
-                    className="bg-slate-50 border border-slate-200 rounded-xl p-3"
-                  >
-                    <p className="text-sm font-medium text-slate-800">
-                      {comment.userName || "Anonymous"}
-                    </p>
-                    <p className="text-sm text-slate-600 mt-1">
-                      {comment.text || "No comment text"}
-                    </p>
+                  <div key={comment._id} className="rounded-xl border border-slate-200 bg-slate-50 p-3">
+                    <p className="text-sm font-medium text-slate-800">{comment.userName || "Anonymous"}</p>
+                    <p className="mt-1 text-sm text-slate-600">{comment.text || "No comment text"}</p>
                   </div>
                 ))}
               </div>

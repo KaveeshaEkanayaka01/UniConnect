@@ -3,6 +3,7 @@ import {
 	register,
 	login,
 	getMe,
+	deleteMe,
 	changePassword,
 	forgotPassword,
 	resetPassword,
@@ -19,6 +20,9 @@ router.post("/login", login);
 
 // Get current user
 router.get("/me", protect, getMe);
+
+// Delete current user account
+router.delete("/me", protect, deleteMe);
 
 // Change password for logged in users
 router.put("/change-password", protect, changePassword);

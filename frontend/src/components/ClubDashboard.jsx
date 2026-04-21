@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
+import toast from "react-hot-toast";
 import {
   CalendarDays,
   Vote,
@@ -92,7 +93,7 @@ const ClubDashboard = () => {
       setDashboard(res?.data || res);
     } catch (error) {
       console.error("Error loading club dashboard:", error);
-      alert(error?.response?.data?.message || "Failed to load club dashboard");
+      toast.error(error?.response?.data?.message || "Failed to load club dashboard");
       navigate("/my-clubs");
     }
   };
@@ -304,7 +305,7 @@ const ClubDashboard = () => {
     console.log("Constitution URL:", fileUrl);
 
     if (!fileUrl) {
-      alert("No constitution file found");
+      toast.error("No constitution file found");
       return;
     }
 

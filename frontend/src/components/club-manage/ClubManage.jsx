@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
+import toast from "react-hot-toast";
 import {
   Search,
   ShieldCheck,
@@ -112,7 +113,7 @@ const ClubManage = () => {
       const dashboardData = dashboardRes?.data || dashboardRes;
 
       if (!dashboardData?.permissions?.canManageClub && !isStoredSystemAdmin) {
-        alert("You are not allowed to manage this club");
+        toast.error("You are not allowed to manage this club");
         navigate(`/clubs/${clubId}`);
         return;
       }
@@ -135,9 +136,7 @@ const ClubManage = () => {
       setMembers(Array.isArray(membersData) ? membersData : []);
     } catch (error) {
       console.error("Failed to load club management data:", error);
-      alert(
-        error?.response?.data?.message || "Failed to load club management data"
-      );
+      toast.error(error?.response?.data?.message || "Failed to load club management data");
       navigate("/my-clubs");
     } finally {
       setLoading(false);
@@ -238,11 +237,13 @@ const ClubManage = () => {
       setMessage("");
       await updateClubMemberRole(clubId, membershipId, newRole);
       setMessage("Member role updated successfully");
+      toast.success("Member role updated successfully");
       await loadData();
     } catch (error) {
       setMessage(
         error?.response?.data?.message || "Failed to update member role"
       );
+      toast.error(error?.response?.data?.message || "Failed to update member role");
     }
   };
 
@@ -259,10 +260,12 @@ const ClubManage = () => {
       setMessage("");
       await removeClubMember(clubId, membershipId);
       setMessage("Member removed successfully");
+      toast.success("Member removed successfully");
       await loadData();
     } catch (error) {
       console.error("remove error:", error?.response?.data || error);
       setMessage(error?.response?.data?.message || "Failed to remove member");
+      toast.error(error?.response?.data?.message || "Failed to remove member");
     }
   };
 
@@ -274,9 +277,11 @@ const ClubManage = () => {
         prev.filter((request) => request._id !== requestId)
       );
       setMessage("Join request approved successfully");
+      toast.success("Join request approved successfully");
       await loadData();
     } catch (error) {
       setMessage(error?.response?.data?.message || "Failed to approve request");
+      toast.error(error?.response?.data?.message || "Failed to approve request");
     }
   };
 
@@ -290,9 +295,11 @@ const ClubManage = () => {
         prev.filter((request) => request._id !== requestId)
       );
       setMessage("Join request rejected successfully");
+      toast.success("Join request rejected successfully");
       await loadData();
     } catch (error) {
       setMessage(error?.response?.data?.message || "Failed to reject request");
+      toast.error(error?.response?.data?.message || "Failed to reject request");
     }
   };
 

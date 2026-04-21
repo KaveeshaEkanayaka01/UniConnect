@@ -32,6 +32,7 @@ export default function NewsEditor() {
       navigate('/Managenews');
     } catch (err) {
       console.error(err);
+      toast.error(err?.response?.data?.message || 'Failed to save article');
     }
   };
 

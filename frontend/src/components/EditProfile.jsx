@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import toast from 'react-hot-toast';
 import API from './Auth/axios';
 
 const ProfileEditPage = () => {
@@ -29,7 +30,7 @@ const ProfileEditPage = () => {
         setLoading(false);
       } catch (err) {
         console.error(err);
-        alert('Failed to load profile');
+        toast.error('Failed to load profile');
         navigate('/profile');
       }
     };
@@ -48,11 +49,11 @@ const ProfileEditPage = () => {
         bio: formData.bio
       });
       
-      alert('Profile updated successfully!');
+      toast.success('Profile updated successfully!');
       navigate('/profile');
     } catch (err) {
       console.error(err);
-      alert(err.response?.data?.message || 'Failed to update profile');
+      toast.error(err.response?.data?.message || 'Failed to update profile');
     } finally {
       setSaving(false);
     }
