@@ -1,9 +1,30 @@
- import bcrypt from "bcryptjs";
+import bcrypt from "bcryptjs";
 import crypto from "crypto";
+import nodemailer from "nodemailer";
 import User from "../models/User.js";
 import StudentProfile from "../models/StudentProfile.js";
 import generateToken from "../utils/generateToken.js";
-import sendEmail from "../utils/sendEmail.js";
+
+const sendResetPasswordEmail = async ({ to, subject, text }) => {
+  const user = String(process.env.RESET_EMAIL_USER || "").trim();
+  const pass = String(process.env.RESET_EMAIL_PASS || "").replace(/\s+/g, "");
+
+  if (!user || !pass) {
+    throw new Error("RESET_EMAIL_USER or RESET_EMAIL_PASS is missing in environment");
+  }
+
+  const transporter = nodemailer.createTransport({
+    service: "Gmail",
+    auth: { user, pass },
+  });
+
+  await transporter.sendMail({
+    from: `UniConnect <${user}>`,
+    to,
+    subject,
+    text,
+  });
+};
 
  
 // REGISTER
@@ -141,9 +162,9 @@ export const forgotPassword = async (req, res) => {
     const resetUrl = `${frontendBaseUrl}/reset-password/${rawToken}`;
 
     try {
-      await sendEmail({
+      await sendResetPasswordEmail({
         to: user.email,
-        subject: "UniClub Password Reset",
+        subject: "UniConnect Password Reset",
         text: `You requested a password reset. Click the link below to reset your password:\n\n${resetUrl}\n\nThis link will expire in 15 minutes. If you did not request this, you can ignore this email.`,
       });
     } catch (emailError) {
