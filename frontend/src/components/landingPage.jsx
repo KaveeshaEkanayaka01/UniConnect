@@ -335,33 +335,25 @@ const LandingPage = () => {
     {/* Hero */}
     <section className="max-w-[92rem] mx-auto px-4 pt-32 pb-16">
       <div className="relative overflow-hidden rounded-[32px] border border-white/25 bg-white/10 shadow-2xl backdrop-blur-sm">
-        <div
-          className="flex transition-transform duration-700 ease-out"
-          style={{ transform: `translateX(-${activeSlide * 100}%)` }}
-        >
+        <div className="relative h-[230px] sm:h-[320px] lg:h-[500px]">
           {heroSlides.map((slide, index) => (
-            <div key={slide.title} className="relative min-w-full">
-              <img
-                src={slide.image}
-                alt={slide.title}
-                className="h-[230px] w-full object-cover sm:h-[320px] lg:h-[500px]"
-              />
+            <div
+              key={slide.title}
+              className={`absolute inset-0 transition-opacity duration-[900ms] ease-in-out ${
+                activeSlide === index ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"
+              }`}
+              aria-hidden={activeSlide !== index}
+            >
+              <img src={slide.image} alt={slide.title} className="h-full w-full object-cover" />
 
               <div className="absolute inset-0 bg-gradient-to-r from-[#021057]/65 via-[#04218e]/35 to-transparent" />
 
-             
-
               <div className="absolute inset-y-0 left-0 flex max-w-[70%] flex-col justify-center px-6 sm:px-10">
-                <p className="mb-2 text-xs font-black uppercase tracking-[0.2em] text-yellow-300 sm:text-sm">
-                  
-                </p>
                 <h1 className="text-3xl font-black uppercase leading-none text-white drop-shadow-lg sm:text-5xl lg:text-6xl">
                   {slide.title}
                 </h1>
                 <div className="mt-4 inline-flex w-fit items-center gap-3 rounded-full bg-[#ff007f]/90 px-4 py-2 text-white sm:px-5">
-                  <span className="text-2xl font-black sm:text-4xl">
-                    {slide.date.split(" ")[0]}
-                  </span>
+                  <span className="text-2xl font-black sm:text-4xl">{slide.date.split(" ")[0]}</span>
                   <span className="text-sm font-black uppercase leading-tight sm:text-lg">
                     {slide.date.split(" ")[1]}
                   </span>
@@ -385,43 +377,41 @@ const LandingPage = () => {
                   </Link>
                 </div>
               </div>
-
-              <div className="absolute bottom-6 left-1/2 flex -translate-x-1/2 gap-2">
-                {heroSlides.map((_, dotIndex) => (
-                  <button
-                    key={`dot-${dotIndex}`}
-                    type="button"
-                    onClick={() => handleSlideChange(dotIndex)}
-                    className={`h-2.5 rounded-full transition-all ${
-                      activeSlide === dotIndex ? "w-8 bg-white" : "w-2.5 bg-white/60"
-                    }`}
-                    aria-label={`Go to slide ${dotIndex + 1}`}
-                  />
-                ))}
-              </div>
-
-              <span className="sr-only">Slide {index + 1}</span>
             </div>
           ))}
+
+          <div className="absolute bottom-6 left-1/2 z-20 flex -translate-x-1/2 gap-2">
+            {heroSlides.map((_, dotIndex) => (
+              <button
+                key={`dot-${dotIndex}`}
+                type="button"
+                onClick={() => handleSlideChange(dotIndex)}
+                className={`h-2.5 rounded-full transition-all ${
+                  activeSlide === dotIndex ? "w-8 bg-white" : "w-2.5 bg-white/60"
+                }`}
+                aria-label={`Go to slide ${dotIndex + 1}`}
+              />
+            ))}
+          </div>
+
+          <button
+            type="button"
+            onClick={handlePrevSlide}
+            className="absolute left-4 top-1/2 z-20 -translate-y-1/2 rounded-full border border-white/50 bg-[#0B1E8A]/70 p-2 text-white transition hover:bg-[#0B1E8A]"
+            aria-label="Previous slide"
+          >
+            <ChevronLeft size={20} />
+          </button>
+
+          <button
+            type="button"
+            onClick={handleNextSlide}
+            className="absolute right-4 top-1/2 z-20 -translate-y-1/2 rounded-full border border-white/50 bg-[#0B1E8A]/70 p-2 text-white transition hover:bg-[#0B1E8A]"
+            aria-label="Next slide"
+          >
+            <ChevronRight size={20} />
+          </button>
         </div>
-
-        <button
-          type="button"
-          onClick={handlePrevSlide}
-          className="absolute left-4 top-1/2 -translate-y-1/2 rounded-full border border-white/50 bg-[#0B1E8A]/70 p-2 text-white transition hover:bg-[#0B1E8A]"
-          aria-label="Previous slide"
-        >
-          <ChevronLeft size={20} />
-        </button>
-
-        <button
-          type="button"
-          onClick={handleNextSlide}
-          className="absolute right-4 top-1/2 -translate-y-1/2 rounded-full border border-white/50 bg-[#0B1E8A]/70 p-2 text-white transition hover:bg-[#0B1E8A]"
-          aria-label="Next slide"
-        >
-          <ChevronRight size={20} />
-        </button>
       </div>
 
       <div className="mt-8 grid gap-4 sm:grid-cols-3">
