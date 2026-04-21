@@ -50,21 +50,21 @@ const ProfileViewPage = () => {
   const latestBadge = badges[0] || null;
 
 return (
-  <div className="max-w-4xl mx-auto space-y-8 p-6 bg-[#ffffff] min-h-screen">
+  <div className="max-w-4xl mx-auto space-y-6 p-5 bg-[#ffffff] min-h-screen">
 
     {/* Banner */}
-    <div className="bg-gradient-to-r from-[#0a1e8c] via-[#0c249f] to-[#08166f] h-32 rounded-3xl shadow-md border border-[#f37021]/30" />
+    <div className="bg-gradient-to-r from-[#0a1e8c] via-[#0c249f] to-[#08166f] h-24 rounded-3xl shadow-md border border-[#f37021]/30" />
 
     {/* Header */}
     <div className="flex justify-between items-end">
       <div>
-        <h1 className="text-3xl font-black text-[#0a1e8c]">{user.fullName}</h1>
-        <p className="text-[#f37021] font-bold">{profile.faculty}</p>
+        <h1 className="text-2xl font-black text-[#0a1e8c] sm:text-3xl">{user.fullName}</h1>
+        <p className="mt-1 text-sm text-[#f37021] font-bold sm:text-base">{profile.faculty}</p>
       </div>
 
       <Link
         to="/profile/edit"
-        className="bg-[#f37021] text-white px-4 py-2 rounded-lg font-bold hover:bg-[#d85f1b] transition"
+        className="bg-[#f37021] text-white px-3.5 py-2 rounded-lg text-sm font-bold hover:bg-[#d85f1b] transition sm:px-4"
       >
         Edit Profile
       </Link>
@@ -119,36 +119,36 @@ return (
 
     {/* Badges Section */}
     <section className="space-y-4">
-      <div className="relative overflow-hidden bg-[#0a1e8c] text-white p-6 rounded-2xl border border-[#f37021]/30 shadow-lg">
-        <div className="absolute -top-16 -right-12 w-44 h-44 rounded-full bg-[#f37021]/10 blur-2xl" />
-        <div className="absolute -bottom-20 -left-10 w-56 h-56 rounded-full bg-[#f37021]/20 blur-3xl" />
+      <div className="relative overflow-hidden bg-[#0a1e8c] text-white p-4.5 rounded-2xl border border-[#f37021]/30 shadow-lg sm:p-5">
+        <div className="absolute -top-16 -right-12 w-36 h-36 rounded-full bg-[#f37021]/10 blur-2xl" />
+        <div className="absolute -bottom-20 -left-10 w-44 h-44 rounded-full bg-[#f37021]/20 blur-3xl" />
 
         <div className="relative z-10 flex flex-col md:flex-row md:items-center md:justify-between gap-5">
           <div>
-            <p className="inline-flex items-center gap-2 text-[11px] uppercase tracking-[0.18em] font-extrabold text-[#f37021]">
-              <Sparkles size={14} />
+            <p className="inline-flex items-center gap-2 text-[10px] uppercase tracking-[0.18em] font-extrabold text-[#f37021]">
+              <Sparkles size={12} />
               Achievement Showcase
             </p>
 
-            <h3 className="mt-2 text-2xl font-extrabold tracking-tight text-white">
+            <h3 className="mt-2 text-xl font-extrabold tracking-tight text-white sm:text-2xl">
               Badges
             </h3>
 
-            <p className="text-sm text-white/80 mt-1">
+            <p className="text-xs text-white/80 mt-1 sm:text-sm">
               Your recognitions and accomplishments in UniConnect.
             </p>
           </div>
 
           <div className="flex items-center gap-3">
-            <div className="rounded-xl bg-white/10 border border-[#f37021]/30 px-4 py-3 min-w-[130px]">
-              <p className="text-[10px] uppercase tracking-widest text-[#f37021] font-bold">
+            <div className="rounded-xl bg-white/10 border border-[#f37021]/30 px-3 py-2.5 min-w-[112px]">
+              <p className="text-[9px] uppercase tracking-widest text-[#f37021] font-bold">
                 Total Earned
               </p>
-              <p className="text-2xl font-black text-white">{badges.length}</p>
+              <p className="text-xl font-black text-white sm:text-2xl">{badges.length}</p>
             </div>
 
-            <div className="w-14 h-14 rounded-2xl bg-[#f37021]/20 border border-[#f37021]/30 text-[#f37021] flex items-center justify-center">
-              <Award size={26} />
+            <div className="w-12 h-12 rounded-2xl bg-[#f37021]/20 border border-[#f37021]/30 text-[#f37021] flex items-center justify-center sm:w-14 sm:h-14">
+              <Award size={22} />
             </div>
           </div>
         </div>
