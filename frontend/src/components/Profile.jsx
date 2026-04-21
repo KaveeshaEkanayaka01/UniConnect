@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+// No image import needed for SVG graphic
 import { Link, useNavigate } from "react-router-dom";
 import { Award, Sparkles, CalendarDays, BadgeCheck } from "lucide-react";
 import API from "../components/Auth/axios";
@@ -52,8 +53,29 @@ const ProfileViewPage = () => {
 return (
   <div className="max-w-4xl mx-auto space-y-6 p-5 bg-[#ffffff] min-h-screen">
 
-    {/* Banner */}
-    <div className="bg-gradient-to-r from-[#0a1e8c] via-[#0c249f] to-[#08166f] h-24 rounded-3xl shadow-md border border-[#f37021]/30" />
+    {/* Banner with Avatar on Right */}
+    <div className="relative bg-gradient-to-r from-[#0a1e8c] via-[#0c249f] to-[#08166f] h-32 rounded-3xl shadow-md border border-[#f37021]/30 flex items-center justify-between mb-2 px-8">
+      <div />
+      {/* Glossy SVG Avatar Graphic on right */}
+      <div className="w-24 h-24 rounded-full flex items-center justify-center shadow-lg border-4 border-[#0a1e8c] bg-white">
+        <svg viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-20 h-20">
+          <defs>
+            <radialGradient id="avatarGloss" cx="60%" cy="30%" r="80%">
+              <stop offset="0%" stop-color="#4fc3f7" />
+              <stop offset="80%" stop-color="#1563e7" />
+            </radialGradient>
+            <linearGradient id="avatarShine" x1="0" y1="0" x2="100" y2="100" gradientUnits="userSpaceOnUse">
+              <stop stop-color="#fff" stop-opacity="0.7" />
+              <stop offset="1" stop-color="#fff" stop-opacity="0" />
+            </linearGradient>
+          </defs>
+          <circle cx="50" cy="50" r="48" fill="url(#avatarGloss)" />
+          <ellipse cx="50" cy="40" rx="20" ry="20" fill="#fff" />
+          <ellipse cx="50" cy="75" rx="28" ry="15" fill="#fff" fill-opacity="0.85" />
+          <ellipse cx="70" cy="30" rx="12" ry="6" fill="url(#avatarShine)" />
+        </svg>
+      </div>
+    </div>
 
     {/* Header */}
     <div className="flex justify-between items-end">
