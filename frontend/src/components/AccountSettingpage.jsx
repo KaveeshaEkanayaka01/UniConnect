@@ -1,11 +1,14 @@
 
 import React, { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
+import toast from 'react-hot-toast';
 import API from './Auth/axios';
 
 const AccountSettingsPage  = () => {
+  const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
+  const [isDeleting, setIsDeleting] = useState(false);
   const [profileData, setProfileData] = useState({
     fullName: '',
     email: '',
@@ -41,6 +44,7 @@ const AccountSettingsPage  = () => {
         }
       } catch (err) {
         setError(err?.response?.data?.message || 'Failed to load account settings.');
+        toast.error(err?.response?.data?.message || 'Failed to load account settings.');
       } finally {
         setIsLoading(false);
       }
@@ -55,6 +59,34 @@ const AccountSettingsPage  = () => {
       JSON.stringify({ notifications, privacy })
     );
   }, [notifications, privacy]);
+
+  const handleDeleteAccount = async () => {
+    const confirmed = window.confirm(
+      'Delete your account permanently? This action cannot be undone.'
+    );
+
+    if (!confirmed) return;
+
+    try {
+      setIsDeleting(true);
+      const { data } = await API.delete('/auth/me');
+
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+      localStorage.removeItem('userInfo');
+      localStorage.removeItem('authUser');
+      localStorage.removeItem('accountSettingsPrefs');
+
+      toast.success(data?.message || 'Account deleted successfully');
+      navigate('/login', { replace: true });
+    } catch (err) {
+      const message = err?.response?.data?.message || 'Failed to delete account';
+      toast.error(message);
+      setError(message);
+    } finally {
+      setIsDeleting(false);
+    }
+  };
 
   if (isLoading) {
     return <div className="max-w-3xl mx-auto p-6 text-gray-500">Loading account settings...</div>;
@@ -190,15 +222,15 @@ const AccountSettingsPage  = () => {
         <h3 className="text-xl font-bold mb-2 text-[#f37021]">Danger Zone</h3>
 
         <p className="text-sm text-[#4a5b86] mb-6">
-          Account deactivation is not available yet. Contact support for account
-          removal requests.
+          Delete your account and profile data from UniConnect. This cannot be undone.
         </p>
 
         <button
-          disabled
-          className="px-6 py-2 bg-[#fff4ec] text-[#f37021]/60 font-bold rounded-xl border border-[#f37021]/30 cursor-not-allowed"
+          onClick={handleDeleteAccount}
+          disabled={isDeleting}
+          className="px-6 py-2 bg-[#fff4ec] text-[#f37021] font-bold rounded-xl border border-[#f37021]/30 hover:bg-[#ffe8db] transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
         >
-          Deactivate Account (Coming Soon)
+          {isDeleting ? 'Deleting Account...' : 'Delete Account'}
         </button>
       </section>
     </div>

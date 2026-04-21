@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import toast from 'react-hot-toast';
 import API from './Auth/axios';
 
 const AddSkillPage  = () => {
@@ -24,9 +25,12 @@ const AddSkillPage  = () => {
         category,
         relatedActivity: relatedActivity.trim(),
       });
+      toast.success('Skill added successfully');
       navigate('/skills');
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to add skill');
+      const message = err.response?.data?.message || 'Failed to add skill';
+      setError(message);
+      toast.error(message);
     } finally {
       setLoading(false);
     }

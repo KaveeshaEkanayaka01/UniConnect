@@ -55,6 +55,7 @@ export default function UploadProject() {
       setProjects(res.data);
     } catch (err) {
       console.error("Failed to load projects", err);
+      toast.error('Failed to load projects');
     } finally {
       setLoading(false);
     }
@@ -117,6 +118,7 @@ export default function UploadProject() {
       fetchProjects();
     } catch (error) {
       console.error("Submit error", error);
+      toast.error(error?.response?.data?.message || 'Failed to save project');
     }
   };
 
@@ -175,6 +177,7 @@ export default function UploadProject() {
       setModalComments(res.data || []);
     } catch (err) {
       console.error("Failed to load comments", err);
+      toast.error('Failed to load comments');
       setModalComments([]);
     } finally {
       setCommentsLoading(false);
@@ -196,6 +199,7 @@ export default function UploadProject() {
       }
     } catch (err) {
       console.error("Failed to delete comment", err);
+      toast.error(err?.response?.data?.message || 'Failed to delete comment');
     }
   };
 
@@ -207,6 +211,7 @@ export default function UploadProject() {
         toast.success('Project deleted');
       } catch (err) {
         console.error("Delete failed", err);
+        toast.error(err?.response?.data?.message || 'Failed to delete project');
       }
     }
   };

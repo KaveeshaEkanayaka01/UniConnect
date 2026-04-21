@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import toast from "react-hot-toast";
 import API from "./Auth/axios";
 import {
   BadgeCheck,
@@ -1088,9 +1089,12 @@ const AdminPanel = () => {
     try {
       await API.delete(`/clubs/${clubId}`);
       setMessage("Club deleted successfully");
+      toast.success("Club deleted successfully");
       await loadAdminData();
     } catch (error) {
-      setMessage(error?.response?.data?.message || "Failed to delete club");
+      const message = error?.response?.data?.message || "Failed to delete club";
+      setMessage(message);
+      toast.error(message);
     }
   };
 
@@ -1100,6 +1104,7 @@ const AdminPanel = () => {
 
     if (!isSystemAdmin) {
       setMessage("Only system admins can manage news.");
+      toast.error("Only system admins can manage news.");
       return;
     }
 
@@ -1109,6 +1114,7 @@ const AdminPanel = () => {
       !newsForm.content.trim()
     ) {
       setMessage("Title, summary, and content are required for news.");
+      toast.error("Title, summary, and content are required for news.");
       return;
     }
 
@@ -1118,16 +1124,20 @@ const AdminPanel = () => {
       if (selectedNewsId) {
         await API.put(`/news/${selectedNewsId}`, newsForm);
         setMessage("News updated successfully");
+        toast.success("News updated successfully");
       } else {
         await API.post("/news", newsForm);
         setMessage("News created successfully");
+        toast.success("News created successfully");
       }
 
       resetNewsForm();
       setShowNewsModal(false);
       await loadAdminData();
     } catch (error) {
-      setMessage(error?.response?.data?.message || "Failed to save news");
+      const message = error?.response?.data?.message || "Failed to save news";
+      setMessage(message);
+      toast.error(message);
     } finally {
       setIsSaving(false);
     }
@@ -1136,6 +1146,7 @@ const AdminPanel = () => {
   const handleDeleteNews = async (newsId) => {
     if (!isSystemAdmin) {
       setMessage("Only system admins can delete news.");
+      toast.error("Only system admins can delete news.");
       return;
     }
 
@@ -1145,9 +1156,12 @@ const AdminPanel = () => {
     try {
       await API.delete(`/news/${newsId}`);
       setMessage("News deleted successfully");
+      toast.success("News deleted successfully");
       await loadAdminData();
     } catch (error) {
-      setMessage(error?.response?.data?.message || "Failed to delete news");
+      const message = error?.response?.data?.message || "Failed to delete news";
+      setMessage(message);
+      toast.error(message);
     }
   };
 
@@ -1157,11 +1171,13 @@ const AdminPanel = () => {
 
     if (!isSystemAdmin) {
       setMessage("Only system admins can manage projects.");
+      toast.error("Only system admins can manage projects.");
       return;
     }
 
     if (!projectForm.title.trim() || !projectForm.description.trim()) {
       setMessage("Project title and description are required.");
+      toast.error("Project title and description are required.");
       return;
     }
 
@@ -1171,16 +1187,20 @@ const AdminPanel = () => {
       if (selectedProjectId) {
         await API.put(`/projects/${selectedProjectId}`, projectForm);
         setMessage("Project updated successfully");
+        toast.success("Project updated successfully");
       } else {
         await API.post("/projects", projectForm);
         setMessage("Project created successfully");
+        toast.success("Project created successfully");
       }
 
       resetProjectForm();
       setShowProjectModal(false);
       await loadAdminData();
     } catch (error) {
-      setMessage(error?.response?.data?.message || "Failed to save project");
+      const message = error?.response?.data?.message || "Failed to save project";
+      setMessage(message);
+      toast.error(message);
     } finally {
       setIsSaving(false);
     }
@@ -1189,6 +1209,7 @@ const AdminPanel = () => {
   const handleDeleteProject = async (projectId) => {
     if (!isSystemAdmin) {
       setMessage("Only system admins can delete projects.");
+      toast.error("Only system admins can delete projects.");
       return;
     }
 
@@ -1198,9 +1219,12 @@ const AdminPanel = () => {
     try {
       await API.delete(`/projects/${projectId}`);
       setMessage("Project deleted successfully");
+      toast.success("Project deleted successfully");
       await loadAdminData();
     } catch (error) {
-      setMessage(error?.response?.data?.message || "Failed to delete project");
+      const message = error?.response?.data?.message || "Failed to delete project";
+      setMessage(message);
+      toast.error(message);
     }
   };
 

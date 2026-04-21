@@ -11,6 +11,7 @@ import {
   Users,
   BadgeCheck,
 } from "lucide-react";
+import toast from "react-hot-toast";
 import API from "../Auth/axios";
 import appLogo from "../../../images/uniconnect.png";
 import girlImage from "../../../images/girl.jpeg";
@@ -103,11 +104,13 @@ const LoginPage = () => {
       const role = normalizeRole(user.role);
       const isAdmin = role === "SYSTEM_ADMIN" || role === "CLUB_ADMIN";
 
+      toast.success("Login successful");
+
       navigate(isAdmin ? "/admin" : "/dashboard", { replace: true });
     } catch (err) {
-      setSubmitError(
-        err?.response?.data?.message || err?.message || "Login failed"
-      );
+      const message = err?.response?.data?.message || err?.message || "Login failed";
+      setSubmitError(message);
+      toast.error(message);
     } finally {
       setLoading(false);
     }

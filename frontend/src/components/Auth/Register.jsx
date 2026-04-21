@@ -12,6 +12,7 @@ import {
   Users,
   UserCircle2,
 } from "lucide-react";
+import toast from "react-hot-toast";
 import API from "../Auth/axios";
 import appLogo from "../../../images/uniconnect.png";
 import studentImage from "../../../images/students.jpeg";
@@ -109,10 +110,12 @@ function Register() {
 
       const role = String(safeUser?.role || "").trim().toUpperCase();
       const isAdmin = role === "SYSTEM_ADMIN" || role === "CLUB_ADMIN";
-      alert("Registration successful!");
+      toast.success("Registration successful!");
       navigate(isAdmin ? "/admin" : "/dashboard");
     } catch (err) {
-      setSubmitError(err.response?.data?.message || "Registration failed");
+      const message = err.response?.data?.message || "Registration failed";
+      setSubmitError(message);
+      toast.error(message);
     } finally {
       setLoading(false);
     }

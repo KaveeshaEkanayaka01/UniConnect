@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import toast from "react-hot-toast";
 import {
   getMyClubs,
   getActiveClubs,
@@ -104,18 +105,20 @@ const MyClubs = () => {
   const handleJoin = async (clubId) => {
     try {
       await requestJoinClub(clubId);
+      toast.success("Join request sent successfully");
       await loadClubs();
     } catch (error) {
-      alert(error?.response?.data?.message || "Failed to join club");
+      toast.error(error?.response?.data?.message || "Failed to join club");
     }
   };
 
   const handleCancelRequest = async (clubId) => {
     try {
       await cancelJoinRequest(clubId);
+      toast.success("Join request cancelled");
       await loadClubs();
     } catch (error) {
-      alert(error?.response?.data?.message || "Failed to cancel request");
+      toast.error(error?.response?.data?.message || "Failed to cancel request");
     }
   };
 

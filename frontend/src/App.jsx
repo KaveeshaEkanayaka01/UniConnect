@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { BrowserRouter, Route, Routes, Navigate } from "react-router-dom";
+import { Toaster } from "react-hot-toast";
 
 // Auth
 import Register from "./components/Auth/Register";
@@ -86,6 +87,33 @@ const user = getCurrentUser();
 
   return (
     <BrowserRouter>
+      <Toaster
+        position="top-right"
+        gutter={12}
+        toastOptions={{
+          duration: 3500,
+          style: {
+            borderRadius: "16px",
+            fontSize: "14px",
+            padding: "14px 16px",
+            boxShadow: "0 18px 40px rgba(15, 31, 95, 0.12)",
+          },
+          success: {
+            style: {
+              background: "#ecfdf5",
+              color: "#065f46",
+              border: "1px solid #a7f3d0",
+            },
+          },
+          error: {
+            style: {
+              background: "#fef2f2",
+              color: "#991b1b",
+              border: "1px solid #fecaca",
+            },
+          },
+        }}
+      />
       <Routes>
         {/* Public Routes */}
         <Route path="/" element={<LandingPage />} />
