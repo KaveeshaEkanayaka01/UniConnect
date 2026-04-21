@@ -1,14 +1,13 @@
 import MentorProfile from "../models/MentorProfile.js";
 import MentorshipRequest from "../models/MentorshipRequest.js";
+import Mentorship from "../models/Mentorship.js";
 import Club from "../models/Club.js";
 
 const normalizeArray = (arr = []) => {
   if (Array.isArray(arr)) {
     return [
       ...new Set(
-        arr
-          .map((item) => String(item || "").trim())
-          .filter(Boolean)
+        arr.map((item) => String(item || "").trim()).filter(Boolean)
       ),
     ];
   }
@@ -25,6 +24,18 @@ const normalizeArray = (arr = []) => {
   }
 
   return [];
+};
+
+const normalizeRequestStatus = (status) => {
+  const normalized = String(status || "").trim().toLowerCase();
+
+  if (normalized === "active") return "accepted";
+  if (normalized === "accept") return "accepted";
+  if (normalized === "reject") return "rejected";
+  if (normalized === "complete") return "completed";
+  if (normalized === "cancel") return "cancelled";
+
+  return normalized;
 };
 
 const levelMap = {
@@ -44,8 +55,8 @@ const calculateMatchScore = (studentData, mentorProfile) => {
   const mentorSkills = normalizeArray(mentorProfile.skills || []).map((item) =>
     item.toLowerCase()
   );
-  const mentorInterests = normalizeArray(mentorProfile.interests || []).map((item) =>
-    item.toLowerCase()
+  const mentorInterests = normalizeArray(mentorProfile.interests || []).map(
+    (item) => item.toLowerCase()
   );
 
   const commonSkills = studentSkills.filter((skill) =>
@@ -91,7 +102,7 @@ const calculateMatchScore = (studentData, mentorProfile) => {
     capacityScore * 0.1 +
     availabilityScore * 0.1;
 
-  return Number(finalScore.toFixed(2));
+  return Number((finalScore * 100).toFixed(0));
 };
 
 const validateMentorProfileInput = ({
@@ -163,6 +174,21 @@ const validateMentorProfileInput = ({
       maxMentees: parsedMaxMentees,
     },
   };
+};
+
+const populateMentorshipRequest = async (requestId) => {
+  return MentorshipRequest.findById(requestId)
+    .populate("student", "name fullName email profilePicture")
+    .populate("mentor", "name fullName email profilePicture")
+    .populate("club", "name");
+};
+
+const populateMentorship = async (mentorshipId) => {
+  return Mentorship.findById(mentorshipId)
+    .populate("mentor", "name fullName email profilePicture role")
+    .populate("mentee", "name fullName email profilePicture role")
+    .populate("club", "name")
+    .populate("request");
 };
 
 // Create mentor profile
@@ -293,13 +319,26 @@ export const deleteMyMentorProfile = async (req, res) => {
       });
     }
 
-    const activeAcceptedRequests = await MentorshipRequest.countDocuments({
+    const activeMentorships = await Mentorship.countDocuments({
       club: clubId,
       mentor: req.user._id,
-      status: "ACCEPTED",
+      status: "active",
     });
 
-    if (activeAcceptedRequests > 0) {
+    if (activeMentorships > 0) {
+      return res.status(400).json({
+        message:
+          "Cannot delete mentor profile while you have active mentorships",
+      });
+    }
+
+    const acceptedRequests = await MentorshipRequest.countDocuments({
+      club: clubId,
+      mentor: req.user._id,
+      status: "accepted",
+    });
+
+    if (acceptedRequests > 0) {
       return res.status(400).json({
         message:
           "Cannot delete mentor profile while you have accepted mentorship requests",
@@ -409,12 +448,25 @@ export const createMentorshipRequest = async (req, res) => {
       club: clubId,
       student: req.user._id,
       mentor: mentorId,
-      status: "PENDING",
+      status: "pending",
     });
 
     if (existingPending) {
       return res.status(400).json({
         message: "You already have a pending request for this mentor",
+      });
+    }
+
+    const existingActiveMentorship = await Mentorship.findOne({
+      club: clubId,
+      mentor: mentorId,
+      mentee: req.user._id,
+      status: "active",
+    });
+
+    if (existingActiveMentorship) {
+      return res.status(400).json({
+        message: "You already have an active mentorship with this mentor",
       });
     }
 
@@ -439,12 +491,10 @@ export const createMentorshipRequest = async (req, res) => {
       studentInterests: normalizedStudentInterests,
       studentLevel: studentLevel || "Beginner",
       matchScore,
+      status: "pending",
     });
 
-    const populated = await MentorshipRequest.findById(request._id)
-      .populate("student", "name fullName email profilePicture")
-      .populate("mentor", "name fullName email profilePicture")
-      .populate("club", "name");
+    const populated = await populateMentorshipRequest(request._id);
 
     return res.status(201).json(populated);
   } catch (error) {
@@ -470,6 +520,25 @@ export const getMyMentorshipRequests = async (req, res) => {
   } catch (error) {
     console.error("getMyMentorshipRequests error:", error);
     return res.status(500).json({ message: "Failed to fetch your requests" });
+  }
+};
+
+// Student's active / history mentorships from mentorships collection
+export const getMyMentorships = async (req, res) => {
+  try {
+    const mentorships = await Mentorship.find({
+      mentee: req.user._id,
+    })
+      .populate("mentor", "name fullName email profilePicture role")
+      .populate("mentee", "name fullName email profilePicture role")
+      .populate("club", "name")
+      .populate("request")
+      .sort({ createdAt: -1 });
+
+    return res.status(200).json(mentorships);
+  } catch (error) {
+    console.error("getMyMentorships error:", error);
+    return res.status(500).json({ message: "Failed to fetch mentorships" });
   }
 };
 
@@ -560,13 +629,32 @@ export const getMentorRequests = async (req, res) => {
   }
 };
 
+// Mentor's mentorships
+export const getMentorMentorships = async (req, res) => {
+  try {
+    const mentorships = await Mentorship.find({
+      mentor: req.user._id,
+    })
+      .populate("mentor", "name fullName email profilePicture role")
+      .populate("mentee", "name fullName email profilePicture role")
+      .populate("club", "name")
+      .populate("request")
+      .sort({ createdAt: -1 });
+
+    return res.status(200).json(mentorships);
+  } catch (error) {
+    console.error("getMentorMentorships error:", error);
+    return res.status(500).json({ message: "Failed to fetch mentor mentorships" });
+  }
+};
+
 // Accept or reject request
 export const updateMentorshipRequestStatus = async (req, res) => {
   try {
     const { requestId } = req.params;
-    const { status } = req.body;
+    const status = normalizeRequestStatus(req.body?.status);
 
-    if (!["ACCEPTED", "REJECTED", "COMPLETED", "CANCELLED"].includes(status)) {
+    if (!["accepted", "rejected", "completed", "cancelled"].includes(status)) {
       return res.status(400).json({ message: "Invalid status" });
     }
 
@@ -584,16 +672,16 @@ export const updateMentorshipRequestStatus = async (req, res) => {
       return res.status(403).json({ message: "Not authorized" });
     }
 
-    const previousStatus = String(request.status || "").toUpperCase();
+    const previousStatus = normalizeRequestStatus(request.status);
 
-    if (status === "ACCEPTED") {
+    if (status === "accepted") {
       if (!isMentor && !isSystemAdmin) {
         return res
           .status(403)
           .json({ message: "Only the mentor can accept this request" });
       }
 
-      if (previousStatus !== "ACCEPTED") {
+      if (previousStatus !== "accepted") {
         const mentorProfile = await MentorProfile.findOne({
           club: request.club,
           mentor: request.mentor,
@@ -615,10 +703,46 @@ export const updateMentorshipRequestStatus = async (req, res) => {
 
         mentorProfile.currentMentees = currentMentees + 1;
         await mentorProfile.save();
+
+        const existingMentorship = await Mentorship.findOne({
+          club: request.club,
+          mentor: request.mentor,
+          mentee: request.student,
+        });
+
+        if (!existingMentorship) {
+          await Mentorship.create({
+            club: request.club,
+            request: request._id,
+            mentor: request.mentor,
+            mentee: request.student,
+            title: "Accepted Mentorship",
+            message: request.message || "",
+            status: "active",
+            goals: [],
+            expertise: normalizeArray(request.studentSkills),
+            interests: normalizeArray(request.studentInterests),
+            studentLevel: request.studentLevel || "Beginner",
+            matchScore: Number(request.matchScore || 0),
+            startDate: new Date(),
+          });
+        } else {
+          existingMentorship.request = request._id;
+          existingMentorship.message = request.message || existingMentorship.message;
+          existingMentorship.expertise = normalizeArray(request.studentSkills);
+          existingMentorship.interests = normalizeArray(request.studentInterests);
+          existingMentorship.studentLevel =
+            request.studentLevel || existingMentorship.studentLevel;
+          existingMentorship.matchScore = Number(request.matchScore || 0);
+          existingMentorship.status = "active";
+          existingMentorship.startDate = existingMentorship.startDate || new Date();
+          existingMentorship.endDate = null;
+          await existingMentorship.save();
+        }
       }
     }
 
-    if (previousStatus === "ACCEPTED" && ["REJECTED", "CANCELLED"].includes(status)) {
+    if (previousStatus === "accepted" && ["rejected", "cancelled", "completed"].includes(status)) {
       const mentorProfile = await MentorProfile.findOne({
         club: request.club,
         mentor: request.mentor,
@@ -632,16 +756,32 @@ export const updateMentorshipRequestStatus = async (req, res) => {
         );
         await mentorProfile.save();
       }
+
+      const mentorship = await Mentorship.findOne({
+        club: request.club,
+        mentor: request.mentor,
+        mentee: request.student,
+      });
+
+      if (mentorship) {
+        mentorship.status =
+          status === "completed"
+            ? "completed"
+            : status === "rejected"
+            ? "rejected"
+            : "cancelled";
+
+        mentorship.endDate = new Date();
+        mentorship.request = request._id;
+        await mentorship.save();
+      }
     }
 
     request.status = status;
     request.respondedAt = new Date();
     await request.save();
 
-    const populated = await MentorshipRequest.findById(request._id)
-      .populate("student", "name fullName email profilePicture")
-      .populate("mentor", "name fullName email profilePicture")
-      .populate("club", "name");
+    const populated = await populateMentorshipRequest(request._id);
 
     return res.status(200).json(populated);
   } catch (error) {

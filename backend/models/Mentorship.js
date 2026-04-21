@@ -1,45 +1,110 @@
 import mongoose from "mongoose";
 
-const meetingSchema = new mongoose.Schema({
-  date: Date,
-  topic: String,
-  notes: String,
-  duration: Number
-}, { timestamps: true });
+const meetingSchema = new mongoose.Schema(
+  {
+    date: Date,
+    topic: String,
+    notes: String,
+    duration: Number,
+  },
+  { _id: false }
+);
 
-const feedbackSchema = new mongoose.Schema({
-  mentor: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
-  mentee: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
-  rating: { type: Number, min: 1, max: 5 },
-  comment: String,
-  createdAt: { type: Date, default: Date.now }
-});
+const feedbackSchema = new mongoose.Schema(
+  {
+    mentor: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+    mentee: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+    rating: { type: Number, min: 1, max: 5 },
+    comment: String,
+    createdAt: { type: Date, default: Date.now },
+  },
+  { _id: false }
+);
 
 const mentorshipSchema = new mongoose.Schema(
   {
-    mentor: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
-    mentee: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
+    club: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Club",
+      required: true,
+    },
+    request: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "MentorshipRequest",
+      default: null,
+    },
+    mentor: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      required: true,
+    },
+    mentee: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      required: true,
+    },
 
-    message: { type: String, default: "" },
+    title: {
+      type: String,
+      trim: true,
+      default: "",
+    },
+
+    message: {
+      type: String,
+      default: "",
+    },
 
     status: {
       type: String,
-      enum: ["pending", "active", "completed", "rejected"],
-      default: "pending"
+      enum: ["active", "completed", "cancelled", "rejected"],
+      default: "active",
     },
 
-    goals: [String],
-    expertise: [String],
+    goals: {
+      type: [String],
+      default: [],
+    },
+
+    expertise: {
+      type: [String],
+      default: [],
+    },
+
+    interests: {
+      type: [String],
+      default: [],
+    },
+
+    studentLevel: {
+      type: String,
+      enum: ["Beginner", "Intermediate", "Advanced", "Expert"],
+      default: "Beginner",
+    },
+
+    matchScore: {
+      type: Number,
+      min: 0,
+      max: 100,
+      default: 0,
+    },
 
     startDate: Date,
     endDate: Date,
 
-    meetings: [meetingSchema],
-    feedback: feedbackSchema,
+    meetings: {
+      type: [meetingSchema],
+      default: [],
+    },
 
-    matchScore: { type: Number, min: 0, max: 100 }
+    feedback: {
+      type: feedbackSchema,
+      default: null,
+    },
   },
   { timestamps: true }
 );
+
+mentorshipSchema.index({ club: 1, mentor: 1, mentee: 1 }, { unique: true });
 
 export default mongoose.model("Mentorship", mentorshipSchema);
