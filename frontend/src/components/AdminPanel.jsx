@@ -280,6 +280,19 @@ const eventStatusOptions = ["upcoming", "ongoing", "completed", "cancelled"];
 
 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
+const getStoredUser = () => {
+  try {
+    return (
+      JSON.parse(localStorage.getItem("userInfo")) ||
+      JSON.parse(localStorage.getItem("user")) ||
+      JSON.parse(localStorage.getItem("authUser")) ||
+      null
+    );
+  } catch {
+    return null;
+  }
+};
+
 const AdminPanel = () => {
   const navigate = useNavigate();
 
@@ -305,12 +318,16 @@ const AdminPanel = () => {
   const [isSaving, setIsSaving] = useState(false);
 
   const [message, setMessage] = useState("");
-  const [me, setMe] = useState(null);
+  const [me, setMe] = useState(() => getStoredUser());
 
   const [hasAdminAccess, setHasAdminAccess] = useState(false);
   const [hasClubAccess, setHasClubAccess] = useState(false);
 
-  const [activeTab, setActiveTab] = useState("overview");
+  const [activeTab, setActiveTab] = useState(() =>
+    String(getStoredUser()?.role || "").toUpperCase() === "CLUB_ADMIN"
+      ? "clubs"
+      : "overview"
+  );
 
   const [showAddUserModal, setShowAddUserModal] = useState(false);
   const [showEditUserModal, setShowEditUserModal] = useState(false);
@@ -405,19 +422,28 @@ const AdminPanel = () => {
   // from /registrations/slots/:id for each event (same as reference code)
   const loadAdminData = async () => {
     setMessage("");
+    setIsLoading(true);
+
+    let nextMessage = "";
+    let nextMe = me;
+    let nextUsers = [];
+    let nextBadges = [];
+    let nextClubs = [];
+    let nextNews = [];
+    let nextProjects = [];
+    let nextEvents = [];
+    let nextHasAdminAccess = false;
+    let nextHasClubAccess = false;
 
     try {
-      setIsLoading(true);
-
       try {
         const meRes = await API.get("/auth/me");
-        setMe(meRes.data || null);
+        nextMe = meRes.data || null;
       } catch {
-        setMe(null);
+        nextMe = getStoredUser();
       }
 
       let userList = [];
-      let badgeList = [];
       let clubList = [];
       let fetchedNews = [];
       let fetchedProjects = [];
@@ -426,23 +452,22 @@ const AdminPanel = () => {
       try {
         const usersRes = await API.get("/admin/users");
         userList = Array.isArray(usersRes.data) ? usersRes.data : [];
-        setUsers(userList);
-        setHasAdminAccess(true);
+        nextUsers = userList;
+        nextHasAdminAccess = true;
       } catch {
-        setUsers([]);
-        setHasAdminAccess(false);
+        nextUsers = [];
+        nextHasAdminAccess = false;
       }
 
       try {
         const badgesRes = await API.get("/admin/badges");
-        badgeList = Array.isArray(badgesRes.data?.data)
+        nextBadges = Array.isArray(badgesRes.data?.data)
           ? badgesRes.data.data
           : Array.isArray(badgesRes.data)
           ? badgesRes.data
           : [];
-        setBadges(badgeList);
       } catch {
-        setBadges([]);
+        nextBadges = [];
       }
 
       try {
@@ -452,11 +477,11 @@ const AdminPanel = () => {
           : Array.isArray(clubsRes.data)
           ? clubsRes.data
           : [];
-        setClubs(clubList);
-        setHasClubAccess(true);
+        nextClubs = clubList;
+        nextHasClubAccess = true;
       } catch {
-        setClubs([]);
-        setHasClubAccess(false);
+        nextClubs = [];
+        nextHasClubAccess = false;
       }
 
       try {
@@ -466,9 +491,9 @@ const AdminPanel = () => {
           : Array.isArray(newsRes.data)
           ? newsRes.data
           : [];
-        setNewsList(fetchedNews);
+        nextNews = fetchedNews;
       } catch {
-        setNewsList([]);
+        nextNews = [];
       }
 
       try {
@@ -478,9 +503,9 @@ const AdminPanel = () => {
           : Array.isArray(projectsRes.data)
           ? projectsRes.data
           : [];
-        setProjects(fetchedProjects);
+        nextProjects = fetchedProjects;
       } catch {
-        setProjects([]);
+        nextProjects = [];
       }
 
       // UPDATED: Fetch events with real-time registration counts
@@ -573,9 +598,9 @@ const AdminPanel = () => {
           })
         );
 
-        setEvents(eventsWithCounts);
+        nextEvents = eventsWithCounts;
       } catch {
-        setEvents([]);
+        nextEvents = [];
       }
 
       if (
@@ -585,11 +610,21 @@ const AdminPanel = () => {
         !fetchedProjects.length &&
         !fetchedEvents.length
       ) {
-        setMessage("Some admin modules are unavailable.");
+        nextMessage = "Some admin modules are unavailable.";
       }
     } catch (error) {
-      setMessage(error?.response?.data?.message || "Failed to load admin data");
+      nextMessage = error?.response?.data?.message || "Failed to load admin data";
     } finally {
+      setMe(nextMe);
+      setUsers(nextUsers);
+      setBadges(nextBadges);
+      setClubs(nextClubs);
+      setNewsList(nextNews);
+      setProjects(nextProjects);
+      setEvents(nextEvents);
+      setHasAdminAccess(nextHasAdminAccess);
+      setHasClubAccess(nextHasClubAccess);
+      setMessage(nextMessage);
       setIsLoading(false);
     }
   };

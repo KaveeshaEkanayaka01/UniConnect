@@ -8,13 +8,8 @@ import {
   getComments,
   deleteComment,
 } from "../../api/projectApi";
+import AdminPagesTopBar from "../AdminPagesTopBar";
 import toast from 'react-hot-toast';
-
-const sidebarItems = [
-  { icon: "🏠", label: "Dashboard",       path: "/admindashboard" },
-  { icon: "📰", label: "Manage News",     path: "/Managenews" },
-  { icon: "🚀", label: "Manage Projects", path: "/UploadProject", active: true },
-];
 
 export default function UploadProject() {
   const navigate = useNavigate();
@@ -231,29 +226,20 @@ export default function UploadProject() {
 
   return (
     <div className="flex min-h-screen bg-slate-50" style={{ fontFamily: "'Inter', sans-serif" }}>
-
-
-      {/* ── MAIN CONTENT ───────────────────────────────── */}
       <div className="flex-1 flex flex-col overflow-hidden">
-
-        {/* Content Area */}
         <main className="flex-1 overflow-y-auto p-8">
-          
+          <AdminPagesTopBar
+            title="Admin Project Control Panel"
+            subtitle="Upload, edit, and moderate student projects."
+          />
+
           {view === 'list' ? (
             <>
               {/* ── ACTIONS BAR ── */}
               <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
                 <div>
-                  <div className="flex items-center gap-3 mb-3">
-                    <button
-                      onClick={() => navigate('/admin')}
-                      className="inline-flex items-center gap-2 px-3 py-1.5 rounded-md bg-white border border-slate-200 text-slate-700 text-sm font-semibold shadow-sm hover:bg-slate-50"
-                    >
-                      ← Back to Admin Panel
-                    </button>
-                  </div>
                   <h2 className="text-2xl font-black text-slate-800 tracking-tight">Manage Projects</h2>
-                  <p className="text-slate-500 text-sm mt-1">Upload, edit, and moderate student projects.</p>
+                 
                 </div>
                 <button 
                   onClick={() => { resetForm(); setView('form'); }} 
@@ -445,13 +431,6 @@ export default function UploadProject() {
               <div className="flex items-center gap-3 mb-6">
                 <button onClick={handleCancel} className="w-10 h-10 flex items-center justify-center rounded-xl bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 transition shadow-sm">
                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
-                </button>
-
-                <button
-                  onClick={() => navigate('/admin')}
-                  className="inline-flex items-center gap-2 px-3 py-2 rounded-xl bg-white border border-slate-200 text-slate-700 text-sm font-semibold shadow-sm hover:bg-slate-50"
-                >
-                  Back to Admin Panel
                 </button>
 
                 <div>

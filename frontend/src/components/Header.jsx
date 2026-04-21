@@ -67,12 +67,14 @@ const Header = ({ onToggleSidebar, userName, avatar, pageTitle, onLogout }) => {
   return (
     <header className="sticky top-0 z-40 h-20 backdrop-blur-xl bg-white/80 border-b border-slate-200/60 flex items-center justify-between px-6 lg:px-10">
       <div className="flex items-center gap-6">
-        <button
-          onClick={onToggleSidebar}
-          className="p-2.5 -ml-2 rounded-xl bg-white border border-slate-100 shadow-sm hover:shadow-md lg:hidden text-slate-500 transition-all active:scale-95"
-        >
-          <Menu size={20} />
-        </button>
+        {onToggleSidebar && (
+          <button
+            onClick={onToggleSidebar}
+            className="p-2.5 -ml-2 rounded-xl bg-white border border-slate-100 shadow-sm hover:shadow-md lg:hidden text-slate-500 transition-all active:scale-95"
+          >
+            <Menu size={20} />
+          </button>
+        )}
 
         <div className="flex flex-col">
           <div className="flex items-center gap-2 text-[10px] font-bold text-indigo-600/60 uppercase tracking-widest">
