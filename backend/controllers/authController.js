@@ -50,6 +50,10 @@ export const register = async (req, res) => {
     const user = await User.findOne({ email });
     if (!user) return res.status(400).json({ message: "Invalid credentials" });
 
+    if (!user.isActive) {
+      return res.status(403).json({ message: "This account has been deactivated" });
+    }
+
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch)
       return res.status(400).json({ message: "Invalid credentials" });
@@ -107,6 +111,35 @@ export const changePassword = async (req, res) => {
     res.status(200).json({ message: "Password updated successfully" });
   } catch (error) {
     res.status(500).json({ message: error.message });
+  }
+};
+
+export const deactivateAccount = async (req, res) => {
+  try {
+    const { currentPassword } = req.body;
+
+    if (!currentPassword) {
+      return res.status(400).json({ message: "Current password is required" });
+    }
+
+    const user = await User.findById(req.user._id);
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    if (!user.isActive) {
+      return res.status(400).json({ message: "Account is already deactivated" });
+    }
+
+    const isMatch = await bcrypt.compare(currentPassword, user.password);
+    if (!isMatch) {
+      return res.status(400).json({ message: "Current password is incorrect" });
+    }
+
+    user.isActive = false;
+    await user.save();
+
+    return res.status(200).json({ message: "Account deactivated successfully" });
+  } catch (error) {
+    return res.status(500).json({ message: error.message });
   }
 };
 

@@ -1,10 +1,12 @@
 
 import React, { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import API from './Auth/axios';
 
 const AccountSettingsPage  = () => {
+  const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(true);
+  const [isDeactivating, setIsDeactivating] = useState(false);
   const [error, setError] = useState('');
   const [profileData, setProfileData] = useState({
     fullName: '',
@@ -13,6 +15,7 @@ const AccountSettingsPage  = () => {
     yearOfStudy: '',
     lastLogin: '',
   });
+  const [accountStatus, setAccountStatus] = useState('Active');
   const [notifications, setNotifications] = useState(true);
   const [privacy, setPrivacy] = useState(false);
 
@@ -32,6 +35,7 @@ const AccountSettingsPage  = () => {
           yearOfStudy: profile.yearOfStudy || user.yearOfStudy || '-',
           lastLogin: user.lastLogin ? new Date(user.lastLogin).toLocaleString() : 'Not available',
         });
+        setAccountStatus(user.isActive ? 'Active' : 'Inactive');
 
         const rawPrefs = localStorage.getItem('accountSettingsPrefs');
         if (rawPrefs) {
@@ -56,6 +60,37 @@ const AccountSettingsPage  = () => {
     );
   }, [notifications, privacy]);
 
+  const handleDeactivateAccount = async () => {
+    const confirmed = window.confirm(
+      'Deactivate your account? You will not be able to log in until an admin reactivates it.'
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    const currentPassword = window.prompt('Enter your current password to confirm deactivation');
+
+    if (!currentPassword) {
+      return;
+    }
+
+    try {
+      setIsDeactivating(true);
+      setError('');
+
+      await API.put('/auth/deactivate-account', { currentPassword });
+
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+      navigate('/login');
+    } catch (err) {
+      setError(err?.response?.data?.message || 'Failed to deactivate account.');
+    } finally {
+      setIsDeactivating(false);
+    }
+  };
+
   if (isLoading) {
     return <div className="max-w-3xl mx-auto p-6 text-gray-500">Loading account settings...</div>;
   }
@@ -79,8 +114,8 @@ const AccountSettingsPage  = () => {
                 <p className="text-sm font-bold text-gray-400 uppercase tracking-widest mb-1">Account Holder</p>
                 <p className="font-bold text-gray-900">{profileData.fullName}</p>
               </div>
-              <span className="px-3 py-1 text-xs font-black text-emerald-700 bg-emerald-50 border border-emerald-100 rounded-full">
-                Active
+              <span className={`px-3 py-1 text-xs font-black rounded-full border ${accountStatus === 'Active' ? 'text-emerald-700 bg-emerald-50 border-emerald-100' : 'text-rose-700 bg-rose-50 border-rose-100'}`}>
+                {accountStatus}
               </span>
             </div>
 
@@ -151,8 +186,15 @@ const AccountSettingsPage  = () => {
 
         <section className="bg-white p-8 rounded-3xl shadow-sm border border-red-50">
           <h3 className="text-xl font-bold mb-2 text-red-600">Danger Zone</h3>
-          <p className="text-sm text-gray-500 mb-6">Account deactivation is not available yet. Contact support for account removal requests.</p>
-          <button disabled className="px-6 py-2 bg-red-50 text-red-400 font-bold rounded-xl border border-red-100 cursor-not-allowed">Deactivate Account (Coming Soon)</button>
+          <p className="text-sm text-gray-500 mb-6">Deactivating your account will block future logins until it is reactivated.</p>
+          <button
+            type="button"
+            onClick={handleDeactivateAccount}
+            disabled={isDeactivating || accountStatus === 'Inactive'}
+            className="px-6 py-2 bg-red-600 text-white font-bold rounded-xl border border-red-700 hover:bg-red-700 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+          >
+            {isDeactivating ? 'Deactivating...' : accountStatus === 'Inactive' ? 'Account Deactivated' : 'Deactivate Account'}
+          </button>
         </section>
       </div>
     </div>

@@ -4,6 +4,7 @@ import {
 	login,
 	getMe,
 	changePassword,
+	deactivateAccount,
 	forgotPassword,
 	resetPassword,
 } from "../controllers/authController.js";
@@ -22,6 +23,9 @@ router.get("/me", protect, getMe);
 
 // Change password for logged in users
 router.put("/change-password", protect, changePassword);
+
+// Deactivate the current account
+router.put("/deactivate-account", protect, deactivateAccount);
 
 // Send reset link to email
 router.post("/forgot-password", forgotPassword);
