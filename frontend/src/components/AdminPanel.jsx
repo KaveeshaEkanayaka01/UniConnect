@@ -72,7 +72,6 @@ const initialNewsForm = {
   content: "",
   category: "General",
   author: "",
-  imageUrl: "",
   isPublished: true,
 };
 
@@ -713,7 +712,6 @@ setEvents(mappedEvents);
       content: item.content || "",
       category: item.category || "General",
       author: item.author || "",
-      imageUrl: item.imageUrl || "",
       isPublished: item.isPublished !== false,
     });
     setShowNewsModal(true);
@@ -2773,12 +2771,6 @@ setEvents(mappedEvents);
         value={newsForm.author}
         onChange={(e) => handleNewsInputChange("author", e.target.value)}
         placeholder="Author"
-        className="w-full border border-[#0a1e8c]/15 rounded-lg px-3 py-2 text-sm text-[#0a1e8c]"
-      />
-      <input
-        value={newsForm.imageUrl}
-        onChange={(e) => handleNewsInputChange("imageUrl", e.target.value)}
-        placeholder="Image URL"
         className="w-full border border-[#0a1e8c]/15 rounded-lg px-3 py-2 text-sm text-[#0a1e8c]"
       />
       <label className="flex items-center gap-2 text-sm text-[#0a1e8c]">

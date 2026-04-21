@@ -32,6 +32,7 @@ const LoginPage = () => {
   const navigate = useNavigate();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState({});
   const [submitError, setSubmitError] = useState("");
@@ -163,14 +164,23 @@ const handleBack = () => {
 
           <div>
             <label className="text-xs text-gray-600">Password</label>
-            <input
-              type="password"
-              value={password}
-              onChange={handlePasswordChange}
-              className={`mt-1 block w-full rounded-lg border px-3 py-2 text-sm text-gray-800 focus:ring-2 focus:ring-[#F36C21] focus:border-[#F36C21] outline-none ${
-                errors.password ? "border-red-500" : "border-gray-300"
-              }`}
-            />
+            <div className="relative mt-1">
+              <input
+                type={showPassword ? "text" : "password"}
+                value={password}
+                onChange={handlePasswordChange}
+                className={`block w-full rounded-lg border px-3 py-2 pr-16 text-sm text-gray-800 focus:ring-2 focus:ring-[#F36C21] focus:border-[#F36C21] outline-none ${
+                  errors.password ? "border-red-500" : "border-gray-300"
+                }`}
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword((prev) => !prev)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-semibold text-[#0B1E8A] hover:text-[#F36C21]"
+              >
+                {showPassword ? "Hide" : "Show"}
+              </button>
+            </div>
             {errors.password && (
               <p className="mt-1 text-xs text-red-600">{errors.password}</p>
             )}

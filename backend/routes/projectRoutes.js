@@ -19,7 +19,7 @@ router.post("/create", uploadEventImage.array("images", 3), createProject);
 router.get("/", getProjects);
 router.put("/:id", uploadEventImage.array("images", 3), updateProject);
 router.delete("/:id", deleteProject);
-router.put("/like/:id", likeProject);
+router.put("/like/:id", protect, likeProject);
 router.post("/comment/:id", protect, addComment);
 router.get("/comments/:id", getComments);
 router.delete("/comment/:id", deleteComment);

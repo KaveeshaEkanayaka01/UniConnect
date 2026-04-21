@@ -91,7 +91,7 @@ export default function UploadProject() {
     if (!form.status) errs.status = 'Please select a project status.';
     // images: when creating require at least 1 image; when editing allow none
     const newImagesCount = images.filter(Boolean).length;
-    const existingCount = existingImages.length || 0;
+    const existingCount = existingImages.filter(Boolean).length;
     if (!editingId && newImagesCount + existingCount === 0) errs.images = 'Please upload at least one image (max 3).';
     if (images.filter(Boolean).length + existingCount > 3) errs.images = 'Maximum 3 images allowed.';
 
@@ -101,16 +101,15 @@ export default function UploadProject() {
     try {
       if (editingId) {
         const selectedFiles = images.filter(Boolean);
-        if (selectedFiles.length > 0) {
-          const data = new FormData();
-          Object.keys(form).forEach((key) => data.append(key, form[key]));
-          selectedFiles.forEach((img) => data.append("images", img));
-          await updateProject(editingId, data);
-          toast.success('Project updated');
-        } else {
-          await updateProject(editingId, form);
-          toast.success('Project updated');
-        }
+        const keptExistingImages = existingImages.filter(Boolean);
+
+        const data = new FormData();
+        Object.keys(form).forEach((key) => data.append(key, form[key]));
+        data.append("existingImages", JSON.stringify(keptExistingImages));
+        selectedFiles.forEach((img) => data.append("images", img));
+
+        await updateProject(editingId, data);
+        toast.success('Project updated');
       } else {
         const data = new FormData();
         Object.keys(form).forEach((key) => data.append(key, form[key]));
@@ -139,8 +138,38 @@ export default function UploadProject() {
         : "",
       status: project.status || "",
     });
-    setExistingImages(project.images || []);
+    setExistingImages([
+      project?.images?.[0] || null,
+      project?.images?.[1] || null,
+      project?.images?.[2] || null,
+    ]);
     setImages([null, null, null]);
+  };
+
+  const handlePickImage = (idx, file) => {
+    if (!file) return;
+
+    const newImgs = [...images];
+    newImgs[idx] = file;
+    setImages(newImgs);
+
+    if (editingId) {
+      const updatedExisting = [...existingImages];
+      updatedExisting[idx] = null;
+      setExistingImages(updatedExisting);
+    }
+  };
+
+  const handleRemoveImage = (idx) => {
+    const newImgs = [...images];
+    newImgs[idx] = null;
+    setImages(newImgs);
+
+    if (editingId) {
+      const updatedExisting = [...existingImages];
+      updatedExisting[idx] = null;
+      setExistingImages(updatedExisting);
+    }
   };
 
   const openComments = async (projectId) => {
@@ -284,30 +313,50 @@ export default function UploadProject() {
                       <button onClick={() => setView('form')} className="text-indigo-600 text-sm font-bold mt-2 hover:underline">Get started now</button>
                     </div>
                   ) : (
-                    <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
-                      {projects.map((p) => (
-                        <div key={p._id} className="bg-white rounded-xl p-0 hover:shadow-lg transition-all duration-300 border border-slate-100 overflow-hidden group">
+                    <div className="grid grid-cols-1 2xl:grid-cols-2 gap-5">
+                      {projects.map((p) => {
+                        const imageUrls = Array.isArray(p.images)
+                          ? p.images
+                              .filter(Boolean)
+                              .map((img) => `http://localhost:5000/uploads/${img}`)
+                          : [];
+
+                        return (
+                        <div key={p._id} className="bg-white rounded-xl p-0 min-h-[220px] hover:shadow-lg transition-all duration-300 border border-slate-100 overflow-hidden group">
                           <div className="flex flex-col sm:flex-row h-full">
                             
                             {/* Thumbnail section */}
-                            <div className="w-full sm:w-36 h-32 sm:h-auto bg-slate-100 flex-shrink-0 relative overflow-hidden">
-                              {p.images && p.images[0] ? (
-                                <img 
-                                  src={`http://localhost:5000/uploads/${p.images[0]}`} 
-                                  alt="thumb" 
-                                  className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
-                                />
+                            <div className="w-full sm:w-48 h-40 sm:h-40 bg-slate-100 flex-shrink-0 relative overflow-hidden">
+                              {imageUrls.length > 0 ? (
+                                <div className={`grid w-full h-full gap-1 p-1 ${imageUrls.length === 1 ? "grid-cols-1" : "grid-cols-2"}`}>
+                                  {imageUrls.slice(0, 3).map((url, idx) => (
+                                    <div
+                                      key={`${p._id}-img-${idx}`}
+                                      className={`relative overflow-hidden rounded-md ${imageUrls.length >= 3 && idx === 0 ? "row-span-2" : ""}`}
+                                    >
+                                      <img
+                                        src={url}
+                                        alt={`project-${idx + 1}`}
+                                        className="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-500"
+                                      />
+                                      {imageUrls.length > 3 && idx === 2 && (
+                                        <div className="absolute inset-0 bg-slate-900/55 text-white text-xs font-bold flex items-center justify-center">
+                                          +{imageUrls.length - 3}
+                                        </div>
+                                      )}
+                                    </div>
+                                  ))}
+                                </div>
                               ) : (
                                 <div className="w-full h-full flex items-center justify-center text-slate-300 text-2xl font-bold">IT</div>
                               )}
-                              <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent pointer-events-none" />
                             </div>
 
                             {/* Content section */}
-                            <div className="flex-1 p-5 flex flex-col justify-between">
+                            <div className="flex-1 min-w-0 p-6 flex flex-col justify-between">
                               <div>
-                                <div className="flex items-center justify-between gap-4 mb-2">
-                                  <h3 className="font-extrabold text-slate-800 text-base leading-tight group-hover:text-indigo-600 transition-colors uppercase tracking-tight line-clamp-1">
+                                <div className="flex items-center justify-between gap-4 mb-2 min-w-0">
+                                  <h3 className="min-w-0 font-extrabold text-slate-800 text-lg leading-tight group-hover:text-indigo-600 transition-colors uppercase tracking-tight line-clamp-1 break-words">
                                     {p.projectName}
                                   </h3>
                                   <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
@@ -326,7 +375,7 @@ export default function UploadProject() {
                                     const isExpanded = expandedProjects.includes(p._id);
                                     return (
                                       <div>
-                                        <p className="text-slate-500 text-xs mb-3 leading-relaxed font-medium">
+                                        <p className="text-slate-500 text-sm mb-3 leading-relaxed font-medium break-words overflow-hidden">
                                           {isLong && !isExpanded ? `${desc.slice(0, PREVIEW_LENGTH)}...` : desc}
                                         </p>
                                         {isLong && (
@@ -383,7 +432,8 @@ export default function UploadProject() {
                             </div>
                           </div>
                         </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   )}
                 </div>
@@ -501,8 +551,8 @@ export default function UploadProject() {
                     </label>
                     <div className="flex gap-4 mt-3">
                       {[0, 1, 2].map((idx) => (
+                        <div key={idx} className="relative">
                         <div 
-                          key={idx} 
                           className="w-28 h-28 rounded-xl bg-white border border-slate-200 border-dashed flex items-center justify-center relative hover:bg-slate-50 transition cursor-pointer overflow-hidden shadow-sm" 
                           onClick={() => document.getElementById(`img-input-${idx}`).click()}
                         >
@@ -539,16 +589,31 @@ export default function UploadProject() {
                             className="hidden"
                             onChange={(e) => {
                               const file = e.target.files[0];
-                              if (file) {
-                                const newImgs = [...images];
-                                newImgs[idx] = file;
-                                setImages(newImgs);
-                              }
+                              handlePickImage(idx, file);
+                              e.target.value = "";
                             }}
                           />
                         </div>
+
+                        {(images[idx] || existingImages[idx]) && (
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleRemoveImage(idx);
+                            }}
+                            className="absolute -top-2 -right-2 w-6 h-6 rounded-full bg-rose-500 text-white text-xs font-bold shadow hover:bg-rose-600"
+                            title="Remove image"
+                          >
+                            ×
+                          </button>
+                        )}
+                        </div>
                       ))}
                     </div>
+                    <p className="mt-2 text-xs text-slate-400">
+                      Click a slot to choose a photo. Use × to remove a selected photo.
+                    </p>
                     {errors.images && <p className="mt-2 text-sm text-red-600">{errors.images}</p>}
                   </div>
 

@@ -60,6 +60,27 @@ export const updateProject = async (req, res) => {
       return res.status(400).json({ message: "You can upload up to 3 images" });
     }
 
+    let keptExistingImages = [];
+
+    if (typeof req.body.existingImages !== "undefined") {
+      if (Array.isArray(req.body.existingImages)) {
+        keptExistingImages = req.body.existingImages.filter(Boolean);
+      } else if (typeof req.body.existingImages === "string") {
+        try {
+          const parsed = JSON.parse(req.body.existingImages);
+          keptExistingImages = Array.isArray(parsed) ? parsed.filter(Boolean) : [];
+        } catch {
+          keptExistingImages = [];
+        }
+      }
+    }
+
+    const newImages = req.files ? req.files.map((file) => file.filename) : [];
+
+    if (keptExistingImages.length + newImages.length > 3) {
+      return res.status(400).json({ message: "You can upload up to 3 images" });
+    }
+
     const updateData = {
       projectName: req.body.projectName,
       description: req.body.description,
@@ -69,8 +90,8 @@ export const updateProject = async (req, res) => {
       status: req.body.status,
     };
 
-    if (req.files && req.files.length > 0) {
-      updateData.images = req.files.map((file) => file.filename);
+    if (typeof req.body.existingImages !== "undefined" || newImages.length > 0) {
+      updateData.images = [...keptExistingImages, ...newImages];
     }
 
     const project = await Project.findByIdAndUpdate(req.params.id, updateData, {
@@ -91,20 +112,36 @@ export const updateProject = async (req, res) => {
 // Like Project
 export const likeProject = async (req, res) => {
   try {
-    const project = await Project.findByIdAndUpdate(
-      req.params.id,
-      { $inc: { likes: 1 } },
-      {
-        returnDocument: "after",
-        runValidators: true,
-      }
-    );
+    const project = await Project.findById(req.params.id);
 
     if (!project) {
       return res.status(404).json({ message: "Project not found" });
     }
 
-    res.status(200).json(project);
+    const userId = String(req.user?._id || "");
+
+    if (!userId) {
+      return res.status(401).json({ message: "Not authorized" });
+    }
+
+    const alreadyLiked = project.likedBy.some(
+      (id) => String(id) === userId
+    );
+
+    if (alreadyLiked) {
+      project.likedBy = project.likedBy.filter((id) => String(id) !== userId);
+      project.likes = Math.max(0, Number(project.likes || 0) - 1);
+    } else {
+      project.likedBy.push(req.user._id);
+      project.likes = Number(project.likes || 0) + 1;
+    }
+
+    await project.save();
+
+    res.status(200).json({
+      likes: project.likes,
+      liked: !alreadyLiked,
+    });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -113,13 +150,19 @@ export const likeProject = async (req, res) => {
 // Add Comment
 export const addComment = async (req, res) => {
   try {
-    // Prefer logged-in user's full name when available
-    const userName = req.user?.fullName || req.body.userName || "Anonymous";
+    const text = String(req.body?.text || "").trim();
+
+    if (!text) {
+      return res.status(400).json({ message: "Comment text is required" });
+    }
+
+    // Always use the authenticated user's name for comment identity
+    const userName = req.user?.fullName || "Anonymous";
 
     const comment = new Comment({
       projectId: req.params.id,
       userName,
-      text: req.body.text,
+      text,
     });
 
     await comment.save();

@@ -40,6 +40,15 @@ const projectSchema = new mongoose.Schema(
       default: 0,
       min: 0,
     },
+    likedBy: {
+      type: [
+        {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: "User",
+        },
+      ],
+      default: [],
+    },
   },
   { timestamps: true }
 );
