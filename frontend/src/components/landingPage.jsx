@@ -1,20 +1,87 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import campusBackground from "../../images/SLIIT-malabe.jpg";
 import appLogo from "../../images/uniconnect.png";
+import heroOne from "../../images/hero1.jpg";
+import heroTwo from "../../images/hero3.jpg";
 import {
   Newspaper,
   FolderOpen,
   BarChart3,
   Users,
-  GraduationCap,
   Building2,
   Award,
   Sparkles,
-  ArrowRight,
+  ChevronLeft,
+  ChevronRight,
+  Menu,
+  X,
 } from "lucide-react";
 
 const LandingPage = () => {
+  const heroSlides = [
+    {
+      image: heroOne,
+      title: "Build Better Campus Communities With UniConnect.",
+      date: "     ",
+      time: "",
+    },
+    {
+      image: heroTwo,
+      title: "Join & Manage Events Easily.",
+      date: "",
+      time: "",
+    },
+    {
+      image: campusBackground,
+      title: "Uni Connect: Your Campus, Your Community.",
+      date: "",
+      time: "",
+    },
+  ];
+
+  const [activeSlide, setActiveSlide] = useState(0);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [isScrolled, setIsScrolled] = useState(false);
+  const [activeLandingTab, setActiveLandingTab] = useState("faculties");
+
+  const navLinks = [
+    { label: "Features", href: "#features" },
+    { label: "Communities", href: "#communities" },
+    { label: "About", href: "#about" },
+    { label: "Impact", href: "#impact" },
+  ];
+
+  useEffect(() => {
+    const timer = window.setInterval(() => {
+      setActiveSlide((prev) => (prev + 1) % heroSlides.length);
+    }, 4500);
+
+    return () => window.clearInterval(timer);
+  }, [heroSlides.length]);
+
+  useEffect(() => {
+    const onScroll = () => {
+      setIsScrolled(window.scrollY > 16);
+    };
+
+    onScroll();
+    window.addEventListener("scroll", onScroll);
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+
+  const handleSlideChange = (index) => {
+    setActiveSlide(index);
+  };
+
+  const handlePrevSlide = () => {
+    setActiveSlide((prev) => (prev - 1 + heroSlides.length) % heroSlides.length);
+  };
+
+  const handleNextSlide = () => {
+    setActiveSlide((prev) => (prev + 1) % heroSlides.length);
+  };
+
   const featureCards = [
     {
       title: "Club Management",
@@ -80,136 +147,417 @@ const LandingPage = () => {
     },
   ];
 
+  const landingTabs = {
+    faculties: {
+      label: "Faculties",
+      title: "Explore by Faculty",
+      subtitle: "Discover student communities and opportunities from each school.",
+      cards: facultyCards,
+    },
+    communities: {
+      label: "Communities",
+      title: "Campus Communities",
+      subtitle: "Join groups, meet peers, and build meaningful networks.",
+      cards: communityCards,
+    },
+    opportunities: {
+      label: "Opportunities",
+      title: "Growth Opportunities",
+      subtitle: "Find practical experiences to grow your profile and confidence.",
+      cards: [
+        {
+          title: "Hackathons",
+          text: "Compete in real-world challenges, collaborate with teams, and ship innovative solutions.",
+        },
+        {
+          title: "Mentorship Sessions",
+          text: "Book one-on-one mentor sessions for career, projects, and academic guidance.",
+        },
+        {
+          title: "Leadership Tracks",
+          text: "Join structured programs focused on communication, planning, and execution skills.",
+        },
+        {
+          title: "Volunteer Drives",
+          text: "Contribute to social-impact projects and earn recognized campus activity credits.",
+        },
+      ],
+    },
+    spotlight: {
+      label: "Spotlight",
+      title: "Campus Spotlight",
+      subtitle: "Quick dummy insights for demos and presentations.",
+      cards: [
+        {
+          title: "120+ Active Clubs",
+          text: "From coding circles to cultural societies, student communities are growing every semester.",
+        },
+        {
+          title: "350+ Published Projects",
+          text: "Students showcase apps, research, and industry work in a central project feed.",
+        },
+        {
+          title: "Weekly Event Calendar",
+          text: "Track workshops, competitions, and networking events in one organized timeline.",
+        },
+        {
+          title: "Verified Badges",
+          text: "Achievement badges make accomplishments visible for portfolios and internships.",
+        },
+      ],
+    },
+  };
+
+  const aboutHighlights = [
+    {
+      title: "One Student Platform",
+      text: "UniConnect centralizes clubs, events, projects, and student achievements into one seamless experience.",
+    },
+    {
+      title: "Built for Collaboration",
+      text: "Students, mentors, and admins can coordinate faster with clear workflows and real-time visibility.",
+    },
+    {
+      title: "Evidence of Growth",
+      text: "From badges to project portfolios, students can present meaningful proof of participation and skills.",
+    },
+  ];
+
+  const impactStats = [
+    { label: "Active Communities", value: "120+" },
+    { label: "Student Projects", value: "350+" },
+    { label: "Monthly Events", value: "90+" },
+    { label: "Mentorship Matches", value: "1,000+" },
+  ];
+
   return (
-  <div
-    className="min-h-screen text-white overflow-x-hidden bg-cover bg-center bg-no-repeat"
-    style={{
-      backgroundImage: `linear-gradient(rgba(11,30,138,0.85), rgba(11,30,138,0.65)), url(${campusBackground})`,
-    }}
-  >
+  <div className="min-h-screen text-white overflow-x-hidden bg-white">
     {/* Top bar */}
     <div className="h-1 w-full bg-gradient-to-r from-[#0B1E8A] via-[#2F4FE3] to-[#F36C21]" />
 
     {/* Navbar */}
-    <nav className="fixed top-0 left-0 w-full z-50 bg-[#0B1E8A]/90 backdrop-blur-md border-b border-[#F36C21]/40">
-      <div className="max-w-7xl mx-auto px-4 py-4 flex justify-between items-center">
+    <nav
+      className={`fixed top-0 left-0 w-full z-50 border-b transition-all duration-300 ${
+        isScrolled
+          ? "border-slate-200/90 bg-[#E5EAF9] shadow-[0_10px_30px_rgba(15,23,42,0.12)]"
+          : "border-slate-200/70 bg-[#E5EAF9]"
+      }`}
+    >
+      <div className="max-w-7xl mx-auto px-4 py-3 flex justify-between items-center">
         
         {/* Logo */}
         <div className="flex items-center space-x-3">
-          <div className="h-14 w-14 rounded-full bg-white p-1 shadow-md">
+          <div className="h-14 w-14 rounded-full bg-white p-1 shadow-md shadow-[#f0932b]/25 ring-1 ring-[#f0932b]/40">
             <img src={appLogo} className="h-full w-full rounded-full object-cover" />
           </div>
           <div>
-            <span className="text-xl font-black text-white block">UniConnect</span>
-            <span className="text-[10px] font-bold text-[#F36C21] uppercase">
+            <span className="text-xl font-black text-[#0B1E8A] block">UniConnect</span>
+            <span className="text-[10px] font-bold text-[#d97706] uppercase tracking-[0.16em]">
               Student Network Portal
             </span>
           </div>
         </div>
 
         {/* Links */}
-        <div className="hidden md:flex items-center space-x-8">
-          <a href="#features" className="hover:text-[#F36C21] font-semibold text-sm">
-            Features
-          </a>
-          <a href="#communities" className="hover:text-[#F36C21] font-semibold text-sm">
-            Communities
-          </a>
+        <div className="hidden md:flex items-center rounded-full border border-slate-200 bg-slate-50 px-3 py-2 space-x-2">
+          {navLinks.map((item) => (
+            <a
+              key={item.label}
+              href={item.href}
+              className="rounded-full px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-[#0B1E8A] hover:text-white"
+            >
+              {item.label}
+            </a>
+          ))}
         </div>
 
         {/* Auth */}
-        <div className="flex items-center space-x-3">
-          <Link to="/login" className="hover:text-[#F36C21] font-bold text-sm px-4 py-2">
+        <div className="hidden md:flex items-center space-x-3">
+          <Link
+            to="/login"
+            className="font-bold text-sm px-4 py-2 rounded-full border border-slate-300 bg-white text-slate-700 transition hover:border-[#0B1E8A] hover:text-[#0B1E8A]"
+          >
             Login
           </Link>
           <Link
             to="/register"
-            className="bg-[#F36C21] text-white px-5 py-2.5 rounded-full font-bold text-sm hover:bg-orange-600 transition"
+            className="bg-[#0B1E8A] text-white px-5 py-2.5 rounded-full font-bold text-sm shadow-lg shadow-[#0B1E8A]/30 hover:bg-[#122ca8] transition"
           >
             Sign Up
           </Link>
         </div>
+
+        <button
+          type="button"
+          onClick={() => setMobileMenuOpen((prev) => !prev)}
+          className="md:hidden inline-flex h-10 w-10 items-center justify-center rounded-full border border-slate-300 bg-white text-slate-700"
+          aria-label={mobileMenuOpen ? "Close navigation menu" : "Open navigation menu"}
+        >
+          {mobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
+        </button>
       </div>
-    </nav>
 
-    {/* Hero */}
-    <section className="max-w-7xl mx-auto px-4 py-24">
-      <div className="grid lg:grid-cols-2 gap-12 items-center">
-        
-        <div className="space-y-8">
-          <h1 className="text-5xl font-black leading-snug">
-            Your University Journey,
-            <span className="block text-[#F36C21] mt-2">
-              Powered In One Place
-            </span>
-          </h1>
+      {mobileMenuOpen && (
+        <div className="md:hidden border-t border-slate-200 bg-white px-4 pb-4 pt-3">
+          <div className="space-y-2">
+            {navLinks.map((item) => (
+              <a
+                key={item.label}
+                href={item.href}
+                onClick={() => setMobileMenuOpen(false)}
+                className="block rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-semibold text-slate-700 hover:border-[#0B1E8A] hover:text-[#0B1E8A]"
+              >
+                {item.label}
+              </a>
+            ))}
+          </div>
 
-          <p className="text-lg text-gray-200 max-w-xl">
-            Manage clubs, explore campus news, showcase projects, and view analytics
-            through one modern student platform.
-          </p>
-
-          <div className="flex gap-4">
-            <Link
-              to="/register"
-              className="px-8 py-4 rounded-xl bg-[#F36C21] font-bold hover:bg-orange-600"
-            >
-              Join UniConnect
-            </Link>
+          <div className="mt-4 grid grid-cols-2 gap-3">
             <Link
               to="/login"
-              className="px-8 py-4 rounded-xl border border-white/40 font-bold hover:border-[#F36C21] hover:text-[#F36C21]"
+              onClick={() => setMobileMenuOpen(false)}
+              className="rounded-full border border-slate-300 px-4 py-2 text-center text-sm font-bold text-slate-700"
             >
-              Continue as Student
+              Login
+            </Link>
+            <Link
+              to="/register"
+              onClick={() => setMobileMenuOpen(false)}
+              className="rounded-full bg-[#0B1E8A] px-4 py-2 text-center text-sm font-bold text-white"
+            >
+              Sign Up
             </Link>
           </div>
         </div>
+      )}
+    </nav>
 
-        {/* Right Panel */}
-        <div className="rounded-2xl bg-white/10 backdrop-blur-lg p-6 space-y-4 border border-white/20">
-          
-          <p className="text-xs uppercase text-[#F36C21] font-bold">
-            Campus Pulse
-          </p>
+    {/* Hero */}
+    <section className="max-w-[92rem] mx-auto px-4 pt-32 pb-16">
+      <div className="relative overflow-hidden rounded-[32px] border border-white/25 bg-white/10 shadow-2xl backdrop-blur-sm">
+        <div
+          className="flex transition-transform duration-700 ease-out"
+          style={{ transform: `translateX(-${activeSlide * 100}%)` }}
+        >
+          {heroSlides.map((slide, index) => (
+            <div key={slide.title} className="relative min-w-full">
+              <img
+                src={slide.image}
+                alt={slide.title}
+                className="h-[230px] w-full object-cover sm:h-[320px] lg:h-[500px]"
+              />
 
-          <Link
-            to="/news-only"
-            className="block p-4 rounded-lg bg-[#0B1E8A]/60 hover:bg-[#0B1E8A]/80 transition"
-          >
-            <div className="flex justify-between items-center">
-              <div>
-                <p className="font-bold">Campus News Hub</p>
-                <p className="text-xs text-gray-300">Latest announcements</p>
+              <div className="absolute inset-0 bg-gradient-to-r from-[#021057]/65 via-[#04218e]/35 to-transparent" />
+
+             
+
+              <div className="absolute inset-y-0 left-0 flex max-w-[70%] flex-col justify-center px-6 sm:px-10">
+                <p className="mb-2 text-xs font-black uppercase tracking-[0.2em] text-yellow-300 sm:text-sm">
+                  
+                </p>
+                <h1 className="text-3xl font-black uppercase leading-none text-white drop-shadow-lg sm:text-5xl lg:text-6xl">
+                  {slide.title}
+                </h1>
+                <div className="mt-4 inline-flex w-fit items-center gap-3 rounded-full bg-[#ff007f]/90 px-4 py-2 text-white sm:px-5">
+                  <span className="text-2xl font-black sm:text-4xl">
+                    {slide.date.split(" ")[0]}
+                  </span>
+                  <span className="text-sm font-black uppercase leading-tight sm:text-lg">
+                    {slide.date.split(" ")[1]}
+                  </span>
+                </div>
+                <p className="mt-3 inline-block w-fit rounded-full bg-yellow-300 px-4 py-1 text-sm font-black uppercase text-[#051763] sm:text-lg">
+                  {slide.time}
+                </p>
+
+                <div className="mt-6 flex flex-wrap gap-3">
+                  <Link
+                    to="/register"
+                    className="rounded-full bg-[#F36C21] px-5 py-2 text-sm font-bold text-white transition hover:bg-orange-600 sm:px-6 sm:py-3"
+                  >
+                    Join Now
+                  </Link>
+                  <Link
+                    to="/login"
+                    className="rounded-full border border-white/80 px-5 py-2 text-sm font-bold text-white transition hover:bg-white hover:text-[#0B1E8A] sm:px-6 sm:py-3"
+                  >
+                    Student Login
+                  </Link>
+                </div>
               </div>
-              <Newspaper className="text-[#F36C21]" />
-            </div>
-          </Link>
 
-          <Link
-            to="/project-feed"
-            className="block p-4 rounded-lg bg-[#0B1E8A]/60 hover:bg-[#0B1E8A]/80 transition"
-          >
-            <div className="flex justify-between items-center">
-              <div>
-                <p className="font-bold">Student Projects</p>
-                <p className="text-xs text-gray-300">Explore work</p>
+              <div className="absolute bottom-6 left-1/2 flex -translate-x-1/2 gap-2">
+                {heroSlides.map((_, dotIndex) => (
+                  <button
+                    key={`dot-${dotIndex}`}
+                    type="button"
+                    onClick={() => handleSlideChange(dotIndex)}
+                    className={`h-2.5 rounded-full transition-all ${
+                      activeSlide === dotIndex ? "w-8 bg-white" : "w-2.5 bg-white/60"
+                    }`}
+                    aria-label={`Go to slide ${dotIndex + 1}`}
+                  />
+                ))}
               </div>
-              <FolderOpen className="text-[#F36C21]" />
-            </div>
-          </Link>
 
-          <Link
-            to="/analysis"
-            className="block p-4 rounded-lg bg-[#0B1E8A]/60 hover:bg-[#0B1E8A]/80 transition"
-          >
-            <div className="flex justify-between items-center">
-              <div>
-                <p className="font-bold">Event Analytics</p>
-                <p className="text-xs text-gray-300">Insights & trends</p>
-              </div>
-              <BarChart3 className="text-[#F36C21]" />
+              <span className="sr-only">Slide {index + 1}</span>
             </div>
-          </Link>
+          ))}
+        </div>
+
+        <button
+          type="button"
+          onClick={handlePrevSlide}
+          className="absolute left-4 top-1/2 -translate-y-1/2 rounded-full border border-white/50 bg-[#0B1E8A]/70 p-2 text-white transition hover:bg-[#0B1E8A]"
+          aria-label="Previous slide"
+        >
+          <ChevronLeft size={20} />
+        </button>
+
+        <button
+          type="button"
+          onClick={handleNextSlide}
+          className="absolute right-4 top-1/2 -translate-y-1/2 rounded-full border border-white/50 bg-[#0B1E8A]/70 p-2 text-white transition hover:bg-[#0B1E8A]"
+          aria-label="Next slide"
+        >
+          <ChevronRight size={20} />
+        </button>
+      </div>
+
+      <div className="mt-8 grid gap-4 sm:grid-cols-3">
+        <Link
+          to="/news-only"
+          className="rounded-xl border border-white/20 bg-[#0B1E8A]/70 p-4 text-white transition hover:bg-[#0B1E8A]/90"
+        >
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="font-bold">Campus News Hub</p>
+              <p className="text-xs text-gray-300">Latest announcements</p>
+            </div>
+            <Newspaper className="text-[#F36C21]" />
+          </div>
+        </Link>
+
+        <Link
+          to="/project-feed"
+          className="rounded-xl border border-white/20 bg-[#0B1E8A]/70 p-4 text-white transition hover:bg-[#0B1E8A]/90"
+        >
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="font-bold">Student Projects</p>
+              <p className="text-xs text-gray-300">Explore work</p>
+            </div>
+            <FolderOpen className="text-[#F36C21]" />
+          </div>
+        </Link>
+
+        <Link
+          to="/analysis"
+          className="rounded-xl border border-white/20 bg-[#0B1E8A]/70 p-4 text-white transition hover:bg-[#0B1E8A]/90"
+        >
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="font-bold">Event Analytics</p>
+              <p className="text-xs text-gray-300">Insights & trends</p>
+            </div>
+            <BarChart3 className="text-[#F36C21]" />
+          </div>
+        </Link>
+      </div>
+    </section>
+
+    {/* Landing Tabs */}
+    <section id="communities" className="max-w-7xl mx-auto px-4 pb-16">
+      <div className="rounded-3xl border border-white/20 bg-[#07144f]/75 p-6 sm:p-8 shadow-xl">
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <div>
+            <p className="text-xs font-bold uppercase tracking-[0.2em] text-[#f6b04f]">
+              Landing Preview Data
+            </p>
+            <h2 className="mt-2 text-2xl sm:text-3xl font-black text-white">
+              {landingTabs[activeLandingTab].title}
+            </h2>
+            <p className="mt-2 text-sm text-slate-200">
+              {landingTabs[activeLandingTab].subtitle}
+            </p>
+          </div>
+        </div>
+
+        <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
+          {Object.entries(landingTabs).map(([key, tab]) => (
+            <button
+              key={key}
+              type="button"
+              onClick={() => setActiveLandingTab(key)}
+              className={`rounded-xl border px-4 py-3 text-sm font-bold transition ${
+                activeLandingTab === key
+                  ? "border-[#f6b04f] bg-[#f6b04f] text-[#08135e]"
+                  : "border-white/20 bg-white/5 text-white hover:border-white/40"
+              }`}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
+
+        <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          {landingTabs[activeLandingTab].cards.map((card) => (
+            <article
+              key={card.title}
+              className="rounded-2xl border border-white/15 bg-white/5 p-4 transition hover:-translate-y-1 hover:border-[#f6b04f]/70"
+            >
+              <h3 className="text-base font-black text-white">{card.title}</h3>
+              <p className="mt-2 text-sm text-slate-200 leading-relaxed">{card.text}</p>
+            </article>
+          ))}
+        </div>
+      </div>
+    </section>
+
+    {/* About Section */}
+    <section id="about" className="max-w-7xl mx-auto px-4 pb-16">
+      <div className="rounded-3xl border border-slate-200 bg-white p-6 sm:p-8 shadow-sm">
+        <p className="text-xs font-bold uppercase tracking-[0.2em] text-[#0B1E8A]">About</p>
+        <h2 className="mt-2 text-2xl sm:text-3xl font-black text-[#0B1E8A]">
+          A Connected Campus Experience
+        </h2>
+        <p className="mt-3 max-w-3xl text-sm sm:text-base text-slate-600">
+          UniConnect is designed to help universities run student ecosystems with clarity,
+          engagement, and measurable outcomes.
+        </p>
+
+        <div className="mt-6 grid gap-4 md:grid-cols-3">
+          {aboutHighlights.map((item) => (
+            <article
+              key={item.title}
+              className="rounded-2xl border border-slate-200 bg-slate-50 p-5"
+            >
+              <h3 className="text-base font-black text-[#0B1E8A]">{item.title}</h3>
+              <p className="mt-2 text-sm text-slate-600 leading-relaxed">{item.text}</p>
+            </article>
+          ))}
+        </div>
+      </div>
+    </section>
+
+    {/* Impact Section */}
+    <section id="impact" className="max-w-7xl mx-auto px-4 pb-16">
+      <div className="rounded-3xl border border-[#0B1E8A]/20 bg-[#EAF0FF] p-6 sm:p-8">
+        <p className="text-xs font-bold uppercase tracking-[0.2em] text-[#0B1E8A]">Impact</p>
+        <h2 className="mt-2 text-2xl sm:text-3xl font-black text-[#0B1E8A]">
+          Platform Outcomes at a Glance
+        </h2>
+
+        <div className="mt-6 grid gap-4 grid-cols-2 lg:grid-cols-4">
+          {impactStats.map((item) => (
+            <article
+              key={item.label}
+              className="rounded-2xl border border-[#0B1E8A]/15 bg-white p-5 text-center"
+            >
+              <p className="text-3xl font-black text-[#0B1E8A]">{item.value}</p>
+              <p className="mt-2 text-sm font-semibold text-slate-600">{item.label}</p>
+            </article>
+          ))}
         </div>
       </div>
     </section>
