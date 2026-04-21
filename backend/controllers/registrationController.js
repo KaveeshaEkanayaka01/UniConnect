@@ -15,11 +15,16 @@ export const registerForEvent = async (req, res) => {
       return res.status(400).json({ message: "Registration deadline has passed" });
     }
 
-    const existingRegistration = await Registration.findOne({ eventId, studentEmail });
+    const existingRegistration = await Registration.findOne({ 
+      eventId, 
+      studentEmail 
+    });
+    
     if (existingRegistration) {
       return res.status(400).json({ message: "You have already registered for this event" });
     }
 
+    // Count actual registered students from Registration collection
     const registeredCount = await Registration.countDocuments({
       eventId,
       status: "registered",
@@ -40,10 +45,6 @@ export const registerForEvent = async (req, res) => {
     });
 
     await registration.save();
-
-    if (status === "registered") {
-      await Event.findByIdAndUpdate(eventId, { $inc: { registeredCount: 1 } });
-    }
 
     console.log(`📧 Sending ${status} email to ${studentEmail}...`);
     const emailSent = await sendRegistrationEmail(
@@ -98,6 +99,7 @@ export const getEventSlots = async (req, res) => {
       return res.status(404).json({ message: "Event not found" });
     }
 
+    // Dynamic counts - always accurate
     const registeredCount = await Registration.countDocuments({
       eventId: req.params.eventId,
       status: "registered",
@@ -111,10 +113,7 @@ export const getEventSlots = async (req, res) => {
     res.json({
       totalCapacity: event.studentCapacity,
       registeredCount,
-      remainingSlots: Math.max(
-        0,
-        event.studentCapacity - registeredCount
-      ),
+      remainingSlots: Math.max(0, event.studentCapacity - registeredCount),
       waitlistCount,
     });
   } catch (error) {
@@ -132,13 +131,11 @@ export const removeRegistration = async (req, res) => {
     const eventId = registration.eventId;
     const wasRegistered = registration.status === "registered";
 
+    // Delete the registration
     await Registration.findByIdAndDelete(req.params.id);
 
+    // If a registered student was removed, promote next waitlist student
     if (wasRegistered) {
-      await Event.findByIdAndUpdate(eventId, {
-        $inc: { registeredCount: -1 },
-      });
-
       const nextWaitlist = await Registration.findOne({
         eventId: eventId,
         status: "waitlist",
@@ -147,10 +144,6 @@ export const removeRegistration = async (req, res) => {
       if (nextWaitlist) {
         nextWaitlist.status = "registered";
         await nextWaitlist.save();
-
-        await Event.findByIdAndUpdate(eventId, {
-          $inc: { registeredCount: 1 },
-        });
 
         const event = await Event.findById(eventId);
 

@@ -1,15 +1,14 @@
 import nodemailer from "nodemailer";
 
-// Create transporter once
-const transporter = nodemailer.createTransport({
-  service: "gmail",
-  auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS,
-  },
-});
-
 const sendEmail = async (to, subject, html) => {
+  const transporter = nodemailer.createTransport({
+    service: "gmail",
+    auth: {
+      user: process.env.EMAIL_USER,
+      pass: process.env.EMAIL_PASS,
+    },
+  });
+
   try {
     const info = await transporter.sendMail({
       from: `"UniConnect Events" <${process.env.EMAIL_USER}>`,

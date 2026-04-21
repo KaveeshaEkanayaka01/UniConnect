@@ -21,9 +21,38 @@ const StudentEvents = () => {
   const fetchEvents = async () => {
     try {
       const res = await axios.get(`${API_URL}/api/events`);
-      setEvents(res.data);
-    } catch {
+      const eventsData = res.data;
+
+      // ✅ Fetch real-time registration counts for each event
+      const eventsWithCounts = await Promise.all(
+        eventsData.map(async (event) => {
+          try {
+            const slotsRes = await axios.get(
+              `${API_URL}/api/registrations/slots/${event._id}`
+            );
+            return {
+              ...event,
+              registeredCount: slotsRes.data.registeredCount || 0,
+              waitlistCount: slotsRes.data.waitlistCount || 0,
+              remainingSlots: slotsRes.data.remainingSlots || 0,
+            };
+          } catch (error) {
+            console.error(`Failed to fetch slots for event ${event._id}:`, error);
+            // Fallback to event's stored count if API fails
+            return {
+              ...event,
+              registeredCount: event.registeredCount || 0,
+              waitlistCount: 0,
+              remainingSlots: event.studentCapacity - (event.registeredCount || 0),
+            };
+          }
+        })
+      );
+
+      setEvents(eventsWithCounts);
+    } catch (error) {
       toast.error('Failed to load events');
+      console.error(error);
     } finally {
       setLoading(false);
     }
@@ -161,7 +190,7 @@ const StudentEvents = () => {
             <option value="Social Event">Social Event</option>
             <option value="Workshop">Workshop</option>
             <option value="Competition">Competition</option>
-            <option value="Club Meeting">Club Meeting</option>
+            <option value="Academics">Academics</option>
             <option value="Other">Other</option>
           </select>
 
@@ -250,13 +279,40 @@ const StudentEvents = () => {
                 key={event._id}
                 className="event-card"
                 style={{
+                  position: 'relative', // ✅ For positioning badge
                   background: '#ffffff',
                   border: '1px solid rgba(10,30,140,0.18)',
                   boxShadow: '0 8px 24px rgba(10,30,140,0.08)',
                   borderRadius: '22px',
                   overflow: 'hidden',
+                  opacity: isPast ? 0.7 : 1, // ✅ Fade past events
+                  filter: isPast ? 'grayscale(30%)' : 'none', // ✅ Slight desaturation
+                  transition: 'all 0.3s ease',
                 }}
               >
+                {/* ✅ Event Ended Badge */}
+                {isPast && (
+                  <div
+                    style={{
+                      position: 'absolute',
+                      top: '12px',
+                      right: '12px',
+                      background: 'rgba(74, 91, 134, 0.95)',
+                      color: '#ffffff',
+                      padding: '6px 14px',
+                      borderRadius: '8px',
+                      fontSize: '11px',
+                      fontWeight: 800,
+                      letterSpacing: '0.05em',
+                      textTransform: 'uppercase',
+                      zIndex: 10,
+                      boxShadow: '0 4px 12px rgba(0,0,0,0.2)',
+                    }}
+                  >
+                    Event Ended
+                  </div>
+                )}
+
                 {event.eventPoster ? (
                   <img
                     src={`${API_URL}${event.eventPoster}`}
@@ -274,7 +330,9 @@ const StudentEvents = () => {
                     className="event-card-no-poster"
                     style={{
                       height: '220px',
-                      background: 'linear-gradient(135deg, #0a1e8c, #08166f)',
+                      background: isPast
+                        ? 'linear-gradient(135deg, #6b7bb5, #4a5b86)' // ✅ Muted gradient for past events
+                        : 'linear-gradient(135deg, #0a1e8c, #08166f)',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
@@ -282,7 +340,7 @@ const StudentEvents = () => {
                       color: '#ffffff',
                     }}
                   >
-                    🎉
+                    {isPast ? '📅' : '🎉'}
                   </div>
                 )}
 
@@ -294,8 +352,8 @@ const StudentEvents = () => {
                       marginBottom: '12px',
                       padding: '7px 12px',
                       borderRadius: '999px',
-                      background: '#fff4ec',
-                      color: '#f37021',
+                      background: isPast ? '#e8ecf3' : '#fff4ec', // ✅ Muted background for past
+                      color: isPast ? '#6b7bb5' : '#f37021',
                       fontSize: '12px',
                       fontWeight: 800,
                       letterSpacing: '0.04em',
@@ -307,7 +365,7 @@ const StudentEvents = () => {
 
                   <h3
                     style={{
-                      color: '#0a1e8c',
+                      color: isPast ? '#6b7bb5' : '#0a1e8c', // ✅ Muted title for past
                       fontSize: '30px',
                       fontWeight: 800,
                       margin: '0 0 14px',
@@ -328,7 +386,7 @@ const StudentEvents = () => {
                       fontSize: '15px',
                     }}
                   >
-                    <FaCalendarAlt color="#0a1e8c" />
+                    <FaCalendarAlt color={isPast ? '#6b7bb5' : '#0a1e8c'} />
                     {new Date(event.eventDate).toLocaleDateString()}
                   </div>
 
@@ -343,7 +401,7 @@ const StudentEvents = () => {
                       fontSize: '15px',
                     }}
                   >
-                    <FaClock color="#0a1e8c" />
+                    <FaClock color={isPast ? '#6b7bb5' : '#0a1e8c'} />
                     {event.startTime} - {event.endTime}
                   </div>
 
@@ -358,10 +416,11 @@ const StudentEvents = () => {
                       fontSize: '15px',
                     }}
                   >
-                    <FaMapMarkerAlt color="#0a1e8c" />
+                    <FaMapMarkerAlt color={isPast ? '#6b7bb5' : '#0a1e8c'} />
                     {event.venue}
                   </div>
 
+                  {/* ✅ Updated registration count display */}
                   <div
                     className="event-card-info"
                     style={{
@@ -373,8 +432,15 @@ const StudentEvents = () => {
                       fontSize: '15px',
                     }}
                   >
-                    <FaUsers color="#0a1e8c" />
-                    {event.registeredCount || 0} / {event.studentCapacity}
+                    <FaUsers color={isPast ? '#6b7bb5' : '#0a1e8c'} />
+                    <span>
+                      {event.registeredCount || 0} / {event.studentCapacity}
+                      {event.waitlistCount > 0 && (
+                        <span style={{ color: isPast ? '#6b7bb5' : '#f37021', marginLeft: '8px' }}>
+                          (+{event.waitlistCount} waitlist)
+                        </span>
+                      )}
+                    </span>
                   </div>
 
                   <div
@@ -395,7 +461,7 @@ const StudentEvents = () => {
                     <button
                       className="btn btn-primary btn-sm"
                       style={{
-                        background: '#0a1e8c',
+                        background: isPast ? '#6b7bb5' : '#0a1e8c', // ✅ Muted button for past
                         border: 'none',
                         color: '#ffffff',
                         padding: '10px 16px',
@@ -423,7 +489,7 @@ const StudentEvents = () => {
                           fontWeight: 700,
                           cursor: 'pointer',
                         }}
-                        onClick={() => navigate('/event-registration')}
+                        onClick={() => navigate(`/event-registration?eventId=${event._id}`)}
                       >
                         Register
                       </button>
@@ -447,6 +513,11 @@ const StudentEvents = () => {
           .events-grid {
             grid-template-columns: 1fr !important;
           }
+        }
+
+        .event-card:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 12px 32px rgba(10,30,140,0.12) !important;
         }
       `}</style>
     </div>
