@@ -12,6 +12,7 @@ import {
 import {
   getClubMentors,
   getMentorRequests,
+  getMyMentorshipRequests,
   updateMentorshipRequestStatus,
   createMentorProfile,
   getMyMentorProfile,
@@ -103,7 +104,9 @@ const EmptyState = ({ title, description, action }) => {
         <Sparkles size={24} />
       </div>
       <h3 className="mt-4 text-xl font-black text-[#0B1E8A]">{title}</h3>
-      <p className="mx-auto mt-2 max-w-xl text-sm text-slate-500">{description}</p>
+      <p className="mx-auto mt-2 max-w-xl text-sm text-slate-500">
+        {description}
+      </p>
       {action ? <div className="mt-5">{action}</div> : null}
     </div>
   );
@@ -134,9 +137,15 @@ const MentorshipTab = ({ clubId, currentUser, dashboard }) => {
       setLoading(true);
       setError("");
 
-      const [mentorsData, mentorRequestsData, myProfileData] = await Promise.all([
+      const [
+        mentorsData,
+        mentorRequestsData,
+        myMentorshipRequestsData,
+        myProfileData,
+      ] = await Promise.all([
         getClubMentors(clubId),
         getMentorRequests(),
+        getMyMentorshipRequests(),
         getMyMentorProfile(clubId),
       ]);
 
@@ -144,11 +153,25 @@ const MentorshipTab = ({ clubId, currentUser, dashboard }) => {
         ? mentorsData
         : mentorsData?.data || [];
 
-      const requestList = Array.isArray(mentorRequestsData)
+      const mentorRequestList = Array.isArray(mentorRequestsData)
         ? mentorRequestsData
         : mentorRequestsData?.data || [];
 
+      const myRequestList = Array.isArray(myMentorshipRequestsData)
+        ? myMentorshipRequestsData
+        : myMentorshipRequestsData?.data || [];
+
       const myProfile = myProfileData?.data || myProfileData || null;
+
+      const requestMap = new Map();
+
+      [...mentorRequestList, ...myRequestList].forEach((request) => {
+        if (request?._id) {
+          requestMap.set(String(request._id), request);
+        }
+      });
+
+      const requestList = Array.from(requestMap.values());
 
       const clubMentorIds = new Set(
         mentorList.map((item) => String(item?.mentor?._id || item?.mentor || ""))
@@ -159,9 +182,13 @@ const MentorshipTab = ({ clubId, currentUser, dashboard }) => {
         const requestMentorId = String(
           request?.mentor?._id || request?.mentor || ""
         );
+        const requestStudentId = String(
+          request?.student?._id || request?.student || ""
+        );
 
         if (requestClubId === String(clubId)) return true;
         if (clubMentorIds.has(requestMentorId)) return true;
+        if (requestStudentId === currentUserId) return true;
 
         return false;
       });
@@ -203,9 +230,11 @@ const MentorshipTab = ({ clubId, currentUser, dashboard }) => {
 
     return requests.filter((request) => {
       const mentorId = String(request?.mentor?._id || request?.mentor || "");
-      return myMentorProfileIds.has(mentorId);
+      const studentId = String(request?.student?._id || request?.student || "");
+
+      return myMentorProfileIds.has(mentorId) || studentId === currentUserId;
     });
-  }, [requests, canManageClub, myMentorProfileIds]);
+  }, [requests, canManageClub, myMentorProfileIds, currentUserId]);
 
   const pendingRequests = useMemo(() => {
     return visibleRequests.filter(
@@ -222,7 +251,9 @@ const MentorshipTab = ({ clubId, currentUser, dashboard }) => {
   const usedCapacity = Number(existingProfile?.currentMentees || 0);
   const maxCapacity = Number(existingProfile?.maxMentees || 0);
   const capacityPercentage =
-    maxCapacity > 0 ? Math.min(100, Math.round((usedCapacity / maxCapacity) * 100)) : 0;
+    maxCapacity > 0
+      ? Math.min(100, Math.round((usedCapacity / maxCapacity) * 100))
+      : 0;
 
   const profileFormInitialData = useMemo(() => {
     if (!existingProfile) return initialForm;
@@ -268,7 +299,9 @@ const MentorshipTab = ({ clubId, currentUser, dashboard }) => {
       const formattedPayload = {
         title: String(payload.title || "").trim(),
         bio: String(payload.bio || "").trim(),
-        skills: Array.isArray(payload.skills) ? payload.skills : splitList(payload.skills),
+        skills: Array.isArray(payload.skills)
+          ? payload.skills
+          : splitList(payload.skills),
         interests: Array.isArray(payload.interests)
           ? payload.interests
           : splitList(payload.interests),
@@ -362,7 +395,7 @@ const MentorshipTab = ({ clubId, currentUser, dashboard }) => {
             </div>
 
             <div className="mt-4 flex flex-wrap items-center gap-2">
-              <h4 className="text-lg font-black text-[#0B1E8A] break-words">
+              <h4 className="break-words text-lg font-black text-[#0B1E8A]">
                 {mentorProfile.title ||
                   mentorUser.fullName ||
                   mentorUser.name ||
@@ -525,7 +558,8 @@ const MentorshipTab = ({ clubId, currentUser, dashboard }) => {
               Manage mentor profiles and requests
             </h2>
             <p className="mt-2 text-sm text-slate-500">
-              My Profile, Mentors, and Requests are separated for a cleaner workflow.
+              My Profile, Mentors, and Requests are separated for a cleaner
+              workflow.
             </p>
           </div>
 
@@ -544,10 +578,10 @@ const MentorshipTab = ({ clubId, currentUser, dashboard }) => {
           <button
             type="button"
             onClick={() => setActiveSection("profile")}
-            className={`rounded-2xl px-5 py-3 text-sm font-semibold border transition ${
+            className={`rounded-2xl border px-5 py-3 text-sm font-semibold transition ${
               activeSection === "profile"
-                ? "bg-[#0B1E8A] border-[#0B1E8A] text-white"
-                : "bg-white border-[#0B1E8A]/15 text-[#0B1E8A] hover:bg-[#f5f8ff]"
+                ? "border-[#0B1E8A] bg-[#0B1E8A] text-white"
+                : "border-[#0B1E8A]/15 bg-white text-[#0B1E8A] hover:bg-[#f5f8ff]"
             }`}
           >
             My Profile
@@ -556,10 +590,10 @@ const MentorshipTab = ({ clubId, currentUser, dashboard }) => {
           <button
             type="button"
             onClick={() => setActiveSection("mentors")}
-            className={`rounded-2xl px-5 py-3 text-sm font-semibold border transition ${
+            className={`rounded-2xl border px-5 py-3 text-sm font-semibold transition ${
               activeSection === "mentors"
-                ? "bg-[#0B1E8A] border-[#0B1E8A] text-white"
-                : "bg-white border-[#0B1E8A]/15 text-[#0B1E8A] hover:bg-[#f5f8ff]"
+                ? "border-[#0B1E8A] bg-[#0B1E8A] text-white"
+                : "border-[#0B1E8A]/15 bg-white text-[#0B1E8A] hover:bg-[#f5f8ff]"
             }`}
           >
             Mentors
@@ -568,10 +602,10 @@ const MentorshipTab = ({ clubId, currentUser, dashboard }) => {
           <button
             type="button"
             onClick={() => setActiveSection("requests")}
-            className={`rounded-2xl px-5 py-3 text-sm font-semibold border transition ${
+            className={`rounded-2xl border px-5 py-3 text-sm font-semibold transition ${
               activeSection === "requests"
-                ? "bg-[#F36C21] border-[#F36C21] text-white"
-                : "bg-white border-[#F36C21]/20 text-[#F36C21] hover:bg-[#fff4ec]"
+                ? "border-[#F36C21] bg-[#F36C21] text-white"
+                : "border-[#F36C21]/20 bg-white text-[#F36C21] hover:bg-[#fff4ec]"
             }`}
           >
             Requests ({visibleRequests.length})
@@ -648,7 +682,9 @@ const MentorshipTab = ({ clubId, currentUser, dashboard }) => {
                         </span>
                       ))
                     ) : (
-                      <span className="text-xs text-slate-500">No skills added</span>
+                      <span className="text-xs text-slate-500">
+                        No skills added
+                      </span>
                     )}
                   </div>
                 </div>
@@ -895,7 +931,9 @@ const MentorshipTab = ({ clubId, currentUser, dashboard }) => {
                             disabled={actionLoadingId === requestId}
                             className="rounded-2xl bg-[#F36C21] px-5 py-3 text-sm font-bold text-white disabled:opacity-60"
                           >
-                            {actionLoadingId === requestId ? "Saving..." : "Accept"}
+                            {actionLoadingId === requestId
+                              ? "Saving..."
+                              : "Accept"}
                           </button>
 
                           <button
@@ -906,7 +944,9 @@ const MentorshipTab = ({ clubId, currentUser, dashboard }) => {
                             disabled={actionLoadingId === requestId}
                             className="rounded-2xl border border-[#0B1E8A]/15 bg-white px-5 py-3 text-sm font-bold text-[#0B1E8A] disabled:opacity-60"
                           >
-                            {actionLoadingId === requestId ? "Saving..." : "Reject"}
+                            {actionLoadingId === requestId
+                              ? "Saving..."
+                              : "Reject"}
                           </button>
                         </div>
                       </div>
