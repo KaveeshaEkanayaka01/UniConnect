@@ -36,10 +36,16 @@ const MentorshipSection = ({ clubId }) => {
         getMyMentorships(),
       ]);
 
-      setRequests(Array.isArray(requestData) ? requestData : []);
-      setAcceptedMentorships(Array.isArray(mentorshipData) ? mentorshipData : []);
+      setRequests(
+        Array.isArray(requestData) ? requestData : requestData?.data || []
+      );
+      setAcceptedMentorships(
+        Array.isArray(mentorshipData) ? mentorshipData : mentorshipData?.data || []
+      );
     } catch (error) {
       console.error(error);
+      setRequests([]);
+      setAcceptedMentorships([]);
     }
   };
 
@@ -62,7 +68,7 @@ const MentorshipSection = ({ clubId }) => {
       };
 
       const data = await getRecommendedMentors(clubId, payload);
-      setRecommendedMentors(Array.isArray(data) ? data : []);
+      setRecommendedMentors(Array.isArray(data) ? data : data?.data || []);
     } catch (error) {
       console.error(error);
       setMessage(
@@ -112,6 +118,18 @@ const MentorshipSection = ({ clubId }) => {
     );
   }, [requests]);
 
+  const historyRequests = useMemo(() => {
+    return requests.filter((item) => {
+      const status = normalizeStatus(item?.status);
+      return (
+        status === "accepted" ||
+        status === "rejected" ||
+        status === "completed" ||
+        status === "cancelled"
+      );
+    });
+  }, [requests]);
+
   const activeMentorships = useMemo(() => {
     return acceptedMentorships.filter(
       (item) => normalizeStatus(item?.status) === "active"
@@ -129,6 +147,28 @@ const MentorshipSection = ({ clubId }) => {
       activeMentorships.map((item) => String(item?.mentor?._id || item?.mentor))
     );
   }, [activeMentorships]);
+
+  const getRequestBadgeClass = (status) => {
+    const normalized = normalizeStatus(status);
+
+    if (normalized === "accepted") {
+      return "bg-green-100 text-green-700";
+    }
+
+    if (normalized === "rejected") {
+      return "bg-red-100 text-red-700";
+    }
+
+    if (normalized === "completed") {
+      return "bg-blue-100 text-blue-700";
+    }
+
+    if (normalized === "cancelled") {
+      return "bg-slate-200 text-slate-700";
+    }
+
+    return "bg-yellow-100 text-yellow-700";
+  };
 
   return (
     <div className="space-y-6 p-4 md:p-6">
@@ -299,27 +339,78 @@ const MentorshipSection = ({ clubId }) => {
           Track your mentorship request updates for this club.
         </p>
 
-        <div className="mt-5 space-y-4">
-          {pendingRequests.length === 0 ? (
-            <p className="text-sm text-slate-500">No mentorship requests yet.</p>
-          ) : (
-            pendingRequests.map((request) => (
-              <div
-                key={request._id}
-                className="rounded-2xl border border-[#0a1e8c]/10 p-4"
-              >
-                <h4 className="font-bold text-[#0a1e8c]">
-                  {request?.mentor?.fullName || request?.mentor?.name || "Mentor"}
-                </h4>
-                <p className="mt-1 text-sm text-slate-600">
-                  Status: {request.status}
-                </p>
-                <p className="mt-1 text-sm text-slate-600">
-                  Match Score: {request.matchScore}
-                </p>
-              </div>
-            ))
-          )}
+        <div className="mt-5">
+          <h4 className="text-lg font-bold text-[#0a1e8c]">Pending Requests</h4>
+
+          <div className="mt-3 space-y-4">
+            {pendingRequests.length === 0 ? (
+              <p className="text-sm text-slate-500">No pending requests.</p>
+            ) : (
+              pendingRequests.map((request) => (
+                <div
+                  key={request._id}
+                  className="rounded-2xl border border-[#0a1e8c]/10 p-4"
+                >
+                  <h4 className="font-bold text-[#0a1e8c]">
+                    {request?.mentor?.fullName ||
+                      request?.mentor?.name ||
+                      "Mentor"}
+                  </h4>
+
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    <span className="rounded-full bg-yellow-100 px-3 py-1 text-xs font-semibold text-yellow-700">
+                      pending
+                    </span>
+
+                    {request?.matchScore !== undefined && (
+                      <span className="rounded-full bg-[#eef2ff] px-3 py-1 text-xs font-semibold text-[#0a1e8c]">
+                        Match Score: {request.matchScore}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+
+        <div className="mt-8">
+          <h4 className="text-lg font-bold text-[#0a1e8c]">Request History</h4>
+
+          <div className="mt-3 space-y-4">
+            {historyRequests.length === 0 ? (
+              <p className="text-sm text-slate-500">No request history yet.</p>
+            ) : (
+              historyRequests.map((request) => (
+                <div
+                  key={request._id}
+                  className="rounded-2xl border border-[#0a1e8c]/10 p-4"
+                >
+                  <h4 className="font-bold text-[#0a1e8c]">
+                    {request?.mentor?.fullName ||
+                      request?.mentor?.name ||
+                      "Mentor"}
+                  </h4>
+
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    <span
+                      className={`rounded-full px-3 py-1 text-xs font-semibold ${getRequestBadgeClass(
+                        request?.status
+                      )}`}
+                    >
+                      {normalizeStatus(request?.status)}
+                    </span>
+
+                    {request?.matchScore !== undefined && (
+                      <span className="rounded-full bg-[#eef2ff] px-3 py-1 text-xs font-semibold text-[#0a1e8c]">
+                        Match Score: {request.matchScore}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
         </div>
       </div>
 
