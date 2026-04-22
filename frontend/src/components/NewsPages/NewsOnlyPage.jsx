@@ -2,6 +2,12 @@ import React, { useEffect, useState } from 'react';
 import { getAllNews } from '../../api/newsApi.js';
 import NewsList from "../../components/NewsComponents/NewsList.jsx";
 
+const parseNewsDate = (value) => {
+  if (!value) return 0;
+  const parsed = new Date(value);
+  return Number.isNaN(parsed.getTime()) ? 0 : parsed.getTime();
+};
+
 const NewsOnlyPage = () => {
   const [newsList, setNewsList]   = useState([]);
   const [loading, setLoading]     = useState(true);
@@ -28,6 +34,12 @@ const NewsOnlyPage = () => {
     const matchSearch   = n.title?.toLowerCase().includes(search.toLowerCase()) ||
                           n.content?.toLowerCase().includes(search.toLowerCase());
     return matchCategory && matchSearch;
+  });
+
+  const sortedFiltered = [...filtered].sort((a, b) => {
+    const dateDiff = parseNewsDate(b.publishedDate) - parseNewsDate(a.publishedDate);
+    if (dateDiff !== 0) return dateDiff;
+    return parseNewsDate(b.createdAt) - parseNewsDate(a.createdAt);
   });
 
   return (
@@ -96,7 +108,7 @@ const NewsOnlyPage = () => {
         )}
 
         {/* News Grid */}
-        {!loading && <NewsList newsList={filtered} />}
+        {!loading && <NewsList newsList={sortedFiltered} />}
       </div>
     </div>
   );

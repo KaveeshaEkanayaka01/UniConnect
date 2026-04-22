@@ -1,7 +1,15 @@
 import React, { useState, useEffect } from "react";
 import { FaNewspaper, FaUser, FaTag } from "react-icons/fa";
 
+const toLocalDateInput = (dateValue) => {
+  const d = new Date(dateValue);
+  if (isNaN(d.getTime())) return "";
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+};
+
 const NewsForm = ({ onSubmit, editingNews, onCancel }) => {
+  const today = new Date();
+  const todayLocal = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
   const [title, setTitle]               = useState("");
   const [content, setContent]           = useState("");
   const [author, setAuthor]             = useState("");
@@ -18,10 +26,7 @@ const NewsForm = ({ onSubmit, editingNews, onCancel }) => {
 
       let dateVal = "";
       if (editingNews.publishedDate) {
-        const d = new Date(editingNews.publishedDate);
-        if (!isNaN(d.getTime())) {
-          dateVal = d.toISOString().substring(0, 10);
-        }
+        dateVal = toLocalDateInput(editingNews.publishedDate);
       }
       setPublishedDate(dateVal);
     } else {
@@ -38,12 +43,7 @@ const NewsForm = ({ onSubmit, editingNews, onCancel }) => {
     else if (content.trim().length < 10) errs.content = "Content must be at least 10 characters.";
     else if (content && content.length > 5000) errs.content = "Article content must be under 5000 characters.";
     if (!category) errs.category = "Please select a category for this news item.";
-    if (publishedDate) {
-      const selected = new Date(publishedDate);
-      const today = new Date();
-      today.setHours(0,0,0,0);
-      if (selected < today) errs.publishedDate = "Publish date cannot be in the past.";
-    }
+    if (publishedDate && publishedDate !== todayLocal) errs.publishedDate = "Publish date must be today.";
 
     setErrors(errs);
     if (Object.keys(errs).length > 0) return;
@@ -142,6 +142,8 @@ const NewsForm = ({ onSubmit, editingNews, onCancel }) => {
           <input
             type="date"
             value={publishedDate}
+            min={todayLocal}
+            max={todayLocal}
             onChange={(e) => setPublishedDate(e.target.value)}
             className={`${inputClass} [color-scheme:light]`}
           />

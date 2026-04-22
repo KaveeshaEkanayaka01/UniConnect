@@ -14,6 +14,8 @@ import toast from 'react-hot-toast';
 export default function UploadProject() {
   const navigate = useNavigate();
   const [expandedProjects, setExpandedProjects] = useState([]);
+  const today = new Date();
+  const todayLocal = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
   const initialForm = {
     projectName: "",
     description: "",
@@ -69,6 +71,16 @@ export default function UploadProject() {
     setErrors({});
   };
 
+  const updateField = (field, value) => {
+    setForm((prev) => ({ ...prev, [field]: value }));
+    setErrors((prev) => {
+      if (!prev[field]) return prev;
+      const next = { ...prev };
+      delete next[field];
+      return next;
+    });
+  };
+
   const submit = async (e) => {
     e.preventDefault();
     // client-side validation
@@ -79,11 +91,7 @@ export default function UploadProject() {
     if (!form.category || form.category.trim().length === 0) errs.category = 'Please enter a category.';
     if (!form.clubName || form.clubName.trim().length === 0) errs.clubName = 'Please enter the club name.';
     if (!form.projectDate) errs.projectDate = 'Please select the project date.';
-    else {
-      const sel = new Date(form.projectDate);
-      const today = new Date(); today.setHours(0,0,0,0);
-      if (sel > today) errs.projectDate = 'Project date cannot be in the future.';
-    }
+    else if (form.projectDate !== todayLocal) errs.projectDate = 'Project date must be today.';
     if (!form.status) errs.status = 'Please select a project status.';
     // images: when creating require at least 1 image; when editing allow none
     const newImagesCount = images.filter(Boolean).length;
@@ -453,7 +461,7 @@ export default function UploadProject() {
                       type="text"
                       placeholder="E.g. Smart Library System"
                       value={form.projectName}
-                      onChange={(e) => setForm({ ...form, projectName: e.target.value })}
+                      onChange={(e) => updateField("projectName", e.target.value)}
                       required
                       className={inputClass}
                     />
@@ -466,7 +474,7 @@ export default function UploadProject() {
                       rows="6"
                       placeholder="Describe your project..."
                       value={form.description}
-                      onChange={(e) => setForm({ ...form, description: e.target.value })}
+                      onChange={(e) => updateField("description", e.target.value)}
                       required
                       className={`${inputClass} resize-y`}
                     />
@@ -483,7 +491,7 @@ export default function UploadProject() {
                         type="text"
                         placeholder="E.g. Environment, Education, Health"
                         value={form.category}
-                        onChange={(e) => setForm({ ...form, category: e.target.value })}
+                        onChange={(e) => updateField("category", e.target.value)}
                         className={inputClass}
                       />
                       {errors.category && <p className="mt-1 text-sm text-red-600">{errors.category}</p>}
@@ -494,7 +502,7 @@ export default function UploadProject() {
                         type="text"
                         placeholder="E.g. LEO Club"
                         value={form.clubName}
-                        onChange={(e) => setForm({ ...form, clubName: e.target.value })}
+                        onChange={(e) => updateField("clubName", e.target.value)}
                         className={inputClass}
                       />
                       {errors.clubName && <p className="mt-1 text-sm text-red-600">{errors.clubName}</p>}
@@ -503,11 +511,13 @@ export default function UploadProject() {
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
-                      <label className={labelClass}>Project Date</label>
+                      <label className={labelClass}>Project Post Upload Date</label>
                       <input
                         type="date"
                         value={form.projectDate}
-                        onChange={(e) => setForm({ ...form, projectDate: e.target.value })}
+                        min={todayLocal}
+                        max={todayLocal}
+                        onChange={(e) => updateField("projectDate", e.target.value)}
                         className={`${inputClass} [color-scheme:light]`}
                       />
                       {errors.projectDate && <p className="mt-1 text-sm text-red-600">{errors.projectDate}</p>}
@@ -516,7 +526,8 @@ export default function UploadProject() {
                       <label className={labelClass}>Status</label>
                       <select
                         value={form.status}
-                        onChange={(e) => setForm({ ...form, status: e.target.value })}
+                        onChange={(e) => updateField("status", e.target.value)}
+                        required
                         className={`${inputClass} appearance-none`}
                       >
                         <option value="">Select status</option>

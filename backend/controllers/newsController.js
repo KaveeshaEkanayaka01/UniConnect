@@ -1,12 +1,21 @@
 import News from '../models/News.js';
 
+const parsePublishedDate = (value) => {
+  if (!value) return undefined;
+  if (typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value)) {
+    // Parse date-only values in local time to prevent UTC day-shift.
+    return new Date(`${value}T00:00:00`);
+  }
+  return new Date(value);
+};
+
 // Create News
 export const createNews = async (req, res) => {
   try {
     const payload = { ...req.body };
 
     if (payload.publishedDate) {
-      payload.publishedDate = new Date(payload.publishedDate);
+      payload.publishedDate = parsePublishedDate(payload.publishedDate);
     }
 
     const news = await News.create(payload);
@@ -26,7 +35,7 @@ export const createNews = async (req, res) => {
 // Get All News
 export const getAllNews = async (req, res) => {
   try {
-    const news = await News.find({ isPublished: true }).sort({ publishedDate: -1 });
+    const news = await News.find({ isPublished: true }).sort({ publishedDate: -1, createdAt: -1 });
 
     res.status(200).json({
       success: true,
@@ -70,7 +79,7 @@ export const updateNews = async (req, res) => {
     const payload = { ...req.body };
 
     if (payload.publishedDate) {
-      payload.publishedDate = new Date(payload.publishedDate);
+      payload.publishedDate = parsePublishedDate(payload.publishedDate);
     }
 
     const news = await News.findByIdAndUpdate(

@@ -6,6 +6,12 @@ import NewsForm from '../../components/NewsComponents/NewsForm.jsx';
 import AdminPagesTopBar from '../AdminPagesTopBar.jsx';
 import { useNavigate } from 'react-router-dom';
 
+const parseNewsDate = (value) => {
+  if (!value) return 0;
+  const parsed = new Date(value);
+  return Number.isNaN(parsed.getTime()) ? 0 : parsed.getTime();
+};
+
 const NewsPage = () => {
   const [newsList, setNewsList] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -72,6 +78,12 @@ const NewsPage = () => {
     setView('list');
     setEditingNews(null);
   };
+
+  const sortedNewsList = [...newsList].sort((a, b) => {
+    const dateDiff = parseNewsDate(b.publishedDate) - parseNewsDate(a.publishedDate);
+    if (dateDiff !== 0) return dateDiff;
+    return parseNewsDate(b.createdAt) - parseNewsDate(a.createdAt);
+  });
 
   return (
     <div
@@ -146,8 +158,8 @@ const NewsPage = () => {
                   Last Update
                 </p>
                 <p className="text-sm font-bold text-slate-800">
-                  {newsList.length > 0 && newsList[0].publishedDate
-                    ? new Date(newsList[0].publishedDate).toLocaleDateString()
+                  {sortedNewsList.length > 0 && sortedNewsList[0].publishedDate
+                    ? new Date(sortedNewsList[0].publishedDate).toLocaleDateString()
                     : 'No Data'}
                 </p>
               </div>
@@ -190,7 +202,7 @@ const NewsPage = () => {
               ) : (
                 <div className="grid gap-4">
                   <NewsList
-                    newsList={newsList}
+                    newsList={sortedNewsList}
                     onEdit={handleEdit}
                     onDelete={handleDelete}
                     isAdminView={true}
